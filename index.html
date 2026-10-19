@@ -3,7 +3,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#17302a">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" href="icone-192.png">
+<link rel="icon" href="icone.svg" type="image/svg+xml">
+<link rel="icon" href="icone-48.png" sizes="48x48">
 <link rel="apple-touch-icon" href="icone-180.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -219,6 +220,7 @@ dialog h3{font:700 1.5rem/1 var(--display);text-transform:uppercase;margin:0}
 .moi i{width:10px;height:10px;border-radius:50%;background:var(--jaune)}
 .mob{display:none!important}
 .marque b{white-space:nowrap}
+.logo{width:34px;height:34px;border-radius:9px;flex:none}
 .moi span{max-width:12ch;overflow:hidden;text-overflow:ellipsis}
 @media (max-width:899px){.marque small{display:none}.moi span{max-width:7ch}.entete{gap:8px}}
 @media (max-width:899px){.mob{display:inline-flex!important}.entete .etat span{display:none}}
@@ -307,7 +309,7 @@ body{margin:0}img{max-width:100%}[hidden]{display:none!important}
 
 <header class="pad">
   <div class="entete">
-    <div class="marque"><b>Planning <span>Atlas</span></b><small>Workshop S5 · Hanoï</small></div>
+    <img class="logo" src="icone.svg" alt="" width="34" height="34"><div class="marque"><b>Planning <span>Atlas</span></b><small>Workshop S5 · Hanoï</small></div>
     <div class="onglets" id="ongletsHaut"></div>
     <button class="moi mob" data-vue="consignes" aria-label="Consignes"><svg width="16" height="16"><use href="#i-con"/></svg></button>
     <button class="moi" id="installer" hidden>Installer l'appli</button>
