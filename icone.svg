@@ -1,8 +1,20 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" fill="#17302a"/>
-  <path d="M108 190 L200 160 L200 380 L108 410 Z" fill="#9ec4d3"/>
-  <path d="M200 160 L312 192 L312 412 L200 380 Z" fill="#72aade"/>
-  <path d="M312 192 L404 162 L404 382 L312 412 Z" fill="#9ec4d3"/>
-  <path d="M256 330 C 236 300 184 252 184 200 A72 72 0 1 1 328 200 C 328 252 276 300 256 330 Z" fill="#f2b705" stroke="#17302a" stroke-width="10" stroke-linejoin="round"/>
-  <circle cx="256" cy="200" r="26" fill="#17302a"/>
+  <defs>
+    <clipPath id="plan"><path d="M48 236 L184 196 L328 236 L464 196 L464 444 L328 484 L184 444 L48 484 Z"/></clipPath>
+  </defs>
+  <!-- carte pliée en trois -->
+  <g stroke="#24546b" stroke-width="8" stroke-linejoin="round">
+    <path d="M48 236 L184 196 L184 444 L48 484 Z" fill="#b5dbe6"/>
+    <path d="M184 196 L328 236 L328 484 L184 444 Z" fill="#7fb3cf"/>
+    <path d="M328 236 L464 196 L464 444 L328 484 Z" fill="#b5dbe6"/>
+  </g>
+  <g clip-path="url(#plan)" fill="none" stroke-linecap="round">
+    <path d="M30 330 C 110 300 150 380 230 360 S 360 290 480 320" stroke="#3a7fb0" stroke-width="22"/>
+    <path d="M90 450 C 150 420 190 430 256 372" stroke="#fff" stroke-width="9" stroke-dasharray="2 20"/>
+  </g>
+  <!-- ombre et repère -->
+  <ellipse cx="256" cy="372" rx="38" ry="11" fill="#0d2430" opacity=".35"/>
+  <path d="M256 366 C 230 322 156 252 156 160 A100 100 0 1 1 356 160 C 356 252 282 322 256 366 Z" fill="#f2b705" stroke="#b57f00" stroke-width="8" stroke-linejoin="round"/>
+  <path d="M256 70 A90 90 0 0 0 166 160" fill="none" stroke="#ffe08a" stroke-width="12" stroke-linecap="round" opacity=".8"/>
+  <circle cx="256" cy="160" r="38" fill="#fffaf0" stroke="#b57f00" stroke-width="6"/>
 </svg>
