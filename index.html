@@ -1,0 +1,839 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#17302a">
+<title>Planning Workshop Atlas</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Be+Vietnam+Pro:wght@400;500;700;800&display=swap">
+<style>
+/* Mise en page : en-tête vert « volet », onglets en bas sur téléphone et en haut sur ordinateur,
+   bouton + flottant selon la vue ; jaune des façades de Hanoï pour l'action et « aujourd'hui » */
+:root{
+  --bg:#eef1ec; --surface:#ffffff; --sunk:#e4e9e3; --ink:#17302a; --muted:#5b6d66; --line:#d3dcd5;
+  --deep:#17302a; --on-deep:#eef1ec; --on-deep-muted:#a9bdb4;
+  --jaune:#f2b705; --on-jaune:#17302a;
+  --t-terrain:#2f7a4f; --t-atelier:#2d6a9f; --t-rendu:#c43d2b; --t-reunion:#7b4fa6; --t-autre:#6d7b75;
+  --s-afaire:#6d7b75; --s-encours:#2d6a9f; --s-fait:#2f7a4f; --alerte:#c43d2b;
+  --display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --body:"Be Vietnam Pro","Segoe UI",system-ui,sans-serif;
+  --r:14px; --nav-h:64px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f1a17; --surface:#17241f; --sunk:#1d2c27; --ink:#e6eee8; --muted:#94a79f; --line:#2a3b35;
+  --deep:#0a1310; --on-deep:#e6eee8; --on-deep-muted:#8fa49b;
+  --jaune:#f5c542; --on-jaune:#17302a;
+  --t-terrain:#5fbf86; --t-atelier:#72aade; --t-rendu:#ef7a64; --t-reunion:#b38de0; --t-autre:#9aa8a2;
+  --s-afaire:#9aa8a2; --s-encours:#72aade; --s-fait:#5fbf86; --alerte:#ef7a64; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1a17; --surface:#17241f; --sunk:#1d2c27; --ink:#e6eee8; --muted:#94a79f; --line:#2a3b35;
+  --deep:#0a1310; --on-deep:#e6eee8; --on-deep-muted:#8fa49b;
+  --jaune:#f5c542; --on-jaune:#17302a;
+  --t-terrain:#5fbf86; --t-atelier:#72aade; --t-rendu:#ef7a64; --t-reunion:#b38de0; --t-autre:#9aa8a2;
+  --s-afaire:#9aa8a2; --s-encours:#72aade; --s-fait:#5fbf86; --alerte:#ef7a64; color-scheme:dark}
+
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+#vue{display:grid;gap:16px;min-width:0}
+.mobile-sem{display:grid;gap:12px}
+.duo.trois{grid-template-columns:minmax(0,1.5fr) minmax(0,1fr) minmax(0,1fr);gap:8px}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--body);-webkit-tap-highlight-color:transparent}
+.pad{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--jaune);outline-offset:2px}
+svg{flex:none}
+
+/* en-tête */
+header{background:var(--deep);color:var(--on-deep);position:sticky;top:env(safe-area-inset-top,0px);z-index:10}
+.entete{max-width:1240px;margin:0 auto;display:flex;align-items:center;gap:16px;min-height:60px;padding-block:8px}
+.marque{display:flex;flex-direction:column;line-height:1.05;margin-right:auto;min-width:0}
+.marque b{font:700 1.45rem var(--display);letter-spacing:.02em;text-transform:uppercase}
+.marque b span{color:var(--jaune)}
+.marque small{color:var(--on-deep-muted);font-size:.78rem}
+.etat{display:flex;align-items:center;gap:6px;font-size:.75rem;color:var(--on-deep-muted);white-space:nowrap}
+.etat i{width:8px;height:8px;border-radius:50%;background:var(--on-deep-muted)}
+.etat.ok i{background:#5fbf86;box-shadow:0 0 0 3px rgba(95,191,134,.25)}
+.onglets{display:flex;gap:2px}
+.onglets button{display:flex;align-items:center;gap:8px;border:0;background:transparent;color:var(--on-deep-muted);font-weight:700;font-size:.9rem;padding:9px 12px;border-radius:10px}
+.onglets button[aria-current="page"]{background:var(--jaune);color:var(--on-jaune)}
+.onglets button:not([aria-current="page"]):hover{color:var(--on-deep)}
+@media (max-width:899px){
+  .entete .onglets{display:none}
+  nav.bas{position:fixed;left:0;right:0;bottom:0;z-index:10;background:var(--surface);border-top:1px solid var(--line);
+    padding-bottom:env(safe-area-inset-bottom,0px)}
+  nav.bas .onglets{justify-content:space-around;height:var(--nav-h)}
+  nav.bas .onglets button{flex:1;flex-direction:column;gap:2px;font-size:.68rem;color:var(--muted);border-radius:0;padding:8px 2px}
+  nav.bas .onglets button[aria-current="page"]{background:transparent;color:var(--ink)}
+  nav.bas .onglets button[aria-current="page"] svg{background:var(--jaune);color:var(--on-jaune);border-radius:999px;padding:3px 14px;width:52px;height:28px}
+  main{padding-bottom:calc(var(--nav-h) + 96px + env(safe-area-inset-bottom,0px))!important}
+}
+@media (min-width:900px){nav.bas{display:none}}
+
+/* page */
+main{max-width:1240px;margin:0 auto;padding-block:20px 110px;display:grid;gap:16px}
+.tete{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:10px 16px}
+h1{font:700 clamp(1.7rem,5vw,2.4rem)/1 var(--display);text-transform:uppercase;letter-spacing:.01em;margin:0;text-wrap:balance}
+h1 small{display:block;font:500 .85rem var(--body);text-transform:none;color:var(--muted);letter-spacing:0;margin-top:4px}
+h2{font:700 .8rem var(--display);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:0;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.bandeau{background:var(--surface);border:1px solid var(--line);border-left:0;border-radius:var(--r);padding:12px 14px;display:flex;gap:10px;align-items:flex-start}
+.bandeau::before{content:"";flex:none;width:10px;height:10px;margin-top:6px;border-radius:50%;background:var(--jaune)}
+.outils{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.recherche{position:relative;flex:1 1 220px;max-width:320px}
+.recherche input{width:100%;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:8px 14px 8px 36px}
+.recherche svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted)}
+.puces{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;max-width:100%}
+.puces button{flex:none;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 12px;font-size:.82rem;font-weight:500;display:flex;align-items:center;gap:6px}
+.puces button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.pastille{width:9px;height:9px;border-radius:3px;background:var(--c,var(--t-autre));flex:none}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:8px 14px;font-weight:700;font-size:.88rem;display:inline-flex;align-items:center;gap:6px}
+.btn.jaune{background:var(--jaune);border-color:var(--jaune);color:var(--on-jaune)}
+.btn.rouge{color:var(--alerte);border-color:currentColor;background:transparent}
+.btn.ico{padding:8px;border-radius:50%}
+.vide{color:var(--muted);font-size:.88rem;margin:0;padding:14px;border:1px dashed var(--line);border-radius:12px;text-align:center}
+.vide button{margin-top:8px}
+
+/* créneaux */
+.creneau{display:grid;grid-template-columns:auto 1fr;gap:2px 12px;width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px;min-width:0}
+.creneau:hover{border-color:var(--muted)}
+.creneau .heure{grid-row:span 3;font:700 1.05rem/1.1 var(--display);font-variant-numeric:tabular-nums;color:var(--c);min-width:44px;display:flex;flex-direction:column}
+.creneau .heure small{font-size:.8rem;color:var(--muted);font-weight:600}
+.creneau .titre{font-weight:700;overflow-wrap:anywhere;line-height:1.3}
+.creneau .meta{font-size:.8rem;color:var(--muted);overflow-wrap:anywhere;display:flex;flex-wrap:wrap;gap:2px 10px}
+.creneau .meta span{display:inline-flex;gap:4px;align-items:center}
+.creneau .type{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--c);display:flex;gap:6px;align-items:center}
+.creneau.passe{opacity:.55}
+.creneau.encours{border-color:var(--jaune);box-shadow:0 0 0 2px var(--jaune)}
+.badge{font-size:.7rem;font-weight:800;border-radius:999px;padding:1px 8px;background:var(--jaune);color:var(--on-jaune);text-transform:none;letter-spacing:0}
+.liste{display:grid;gap:8px}
+
+/* semaine */
+.bande{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:6px}
+.bande button{border:0;background:transparent;border-radius:10px;padding:6px 0;display:grid;justify-items:center;gap:1px}
+.bande button b{font:700 1.2rem/1 var(--display);font-variant-numeric:tabular-nums}
+.bande button small{font-size:.66rem;text-transform:uppercase;color:var(--muted);font-weight:700;letter-spacing:.05em}
+.bande button i{width:5px;height:5px;border-radius:50%;background:transparent}
+.bande button.a i{background:var(--muted)}
+.bande button.auj b{color:var(--alerte)}
+.bande button[aria-pressed="true"]{background:var(--jaune);color:var(--on-jaune)}
+.bande button[aria-pressed="true"] small,.bande button[aria-pressed="true"] b{color:var(--on-jaune)}
+.bande button[aria-pressed="true"] i{background:var(--on-jaune)}
+.sept{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;align-items:start}
+.col7{display:grid;gap:6px;min-width:0}
+.col7 .j{display:flex;align-items:baseline;gap:6px;padding:4px 2px 6px;border-bottom:2px solid var(--line)}
+.col7 .j b{font:700 1.4rem/1 var(--display);font-variant-numeric:tabular-nums}
+.col7 .j small{font-size:.72rem;text-transform:uppercase;font-weight:700;color:var(--muted);letter-spacing:.06em}
+.col7.auj .j{border-color:var(--jaune)}
+.col7.auj .j b{color:var(--alerte)}
+.col7 .creneau{grid-template-columns:1fr;padding:8px 9px}
+.col7 .creneau .heure{grid-row:auto;flex-direction:row;gap:4px;font-size:.92rem;min-width:0}
+.col7 .creneau .heure small{font-size:.92rem}
+.ajout{border:1px dashed var(--line);background:transparent;border-radius:10px;padding:6px;color:var(--muted);font-size:.8rem;opacity:.7}
+.ajout:hover{opacity:1;color:var(--ink)}
+@media (max-width:899px){.sept{display:none}}
+@media (min-width:900px){.mobile-sem{display:none}}
+
+/* tâches */
+.seg{display:flex;background:var(--sunk);border-radius:999px;padding:3px;gap:2px}
+.seg button{flex:1;border:0;background:transparent;border-radius:999px;padding:7px 8px;font-weight:700;font-size:.82rem;color:var(--muted);white-space:nowrap}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+@media (min-width:900px){.seg.taches{display:none}}
+.colonnes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;align-items:start}
+@media (max-width:899px){.colonnes{grid-template-columns:1fr}.colonnes .col:not(.sel){display:none}.colonnes .col h2{display:none}}
+.col{display:grid;gap:8px;min-width:0}
+.col h2 span.n{background:var(--sunk);border-radius:999px;padding:0 8px;color:var(--ink);font-family:var(--body);letter-spacing:0}
+.tache{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:start;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px;min-width:0}
+.tache .rond{width:26px;height:26px;border-radius:50%;border:2px solid var(--c);background:transparent;display:grid;place-items:center;color:var(--surface);padding:0;margin-top:1px}
+.tache .rond.encours{background:linear-gradient(90deg,var(--c) 50%,transparent 50%)}
+.tache .rond.fait{background:var(--c)}
+.tache .corps{border:0;background:transparent;padding:0;text-align:left;display:grid;gap:3px;min-width:0}
+.tache .titre{font-weight:700;overflow-wrap:anywhere;line-height:1.3}
+.tache.fait .titre{text-decoration:line-through;color:var(--muted)}
+.tache .meta{font-size:.8rem;color:var(--muted);display:flex;flex-wrap:wrap;gap:2px 10px}
+.retard{color:var(--alerte);font-weight:700}
+.etiquette{font-size:.72rem;font-weight:700;background:var(--sunk);border-radius:6px;padding:0 6px;color:var(--ink)}
+
+/* mur */
+.mur{columns:280px;column-gap:12px}
+.post{break-inside:avoid;margin:0 0 12px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;display:block;width:100%;text-align:left;padding:0}
+.post:hover{border-color:var(--muted)}
+.post img{display:block;width:100%;height:auto;background:var(--sunk)}
+.post .c{padding:10px 12px 12px;display:grid;gap:6px}
+.post p,.texte{margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
+.post .pied{font-size:.75rem;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center}
+.epingle{display:inline-flex;align-items:center;gap:4px;font-size:.72rem;font-weight:800;color:var(--on-jaune);background:var(--jaune);border-radius:999px;padding:1px 8px;justify-self:start}
+
+/* aujourd'hui */
+.grille{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:18px;align-items:start}
+@media (max-width:899px){.grille{grid-template-columns:1fr}}
+.pile{display:grid;gap:18px;min-width:0}
+.section{display:grid;gap:8px;min-width:0}
+
+/* consignes */
+.feuille{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:clamp(16px,4vw,28px);display:grid;gap:12px}
+.texte{max-width:68ch;line-height:1.7}
+.qui{font-size:.78rem;color:var(--muted)}
+
+/* bouton + */
+.fab{position:fixed;z-index:9;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(20px + env(safe-area-inset-bottom,0px));
+  border:0;border-radius:18px;background:var(--jaune);color:var(--on-jaune);font-weight:800;padding:14px 18px;display:flex;align-items:center;gap:8px;
+  box-shadow:0 6px 18px rgba(15,26,23,.28)}
+@media (max-width:899px){.fab{bottom:calc(var(--nav-h) + 14px + env(safe-area-inset-bottom,0px))}}
+
+/* fenêtre d'édition : feuille du bas sur téléphone */
+dialog{border:0;padding:0;background:var(--surface);color:var(--ink);border-radius:18px;width:min(560px,calc(100vw - 32px));max-height:calc(100dvh - 32px)}
+dialog::backdrop{background:rgba(10,19,16,.55)}
+@media (max-width:599px){dialog{width:100%;max-width:100%;margin:auto 0 0;border-radius:20px 20px 0 0;max-height:92dvh}
+  dialog form{padding-bottom:calc(18px + env(safe-area-inset-bottom,0px))!important}}
+dialog form{display:grid;gap:14px;padding:20px max(18px,env(safe-area-inset-left,0px)) 18px max(18px,env(safe-area-inset-right,0px))}
+dialog h3{font:700 1.5rem/1 var(--display);text-transform:uppercase;margin:0}
+.champ{display:grid;gap:5px;min-width:0}
+.champ>label,.champ>span.l{font-size:.75rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.champ input:not([type=checkbox]):not([type=radio]):not([type=file]),.champ select,.champ textarea{width:100%;border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:10px 12px}
+.champ textarea{resize:vertical}
+.duo{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px}
+.choix{display:flex;flex-wrap:wrap;gap:6px}
+.choix label{position:relative}
+.choix input{position:absolute;opacity:0;pointer-events:none}
+.choix label>span{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-size:.85rem;font-weight:500;cursor:pointer}
+.choix input:checked+span{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.choix input:focus-visible+span{outline:3px solid var(--jaune);outline-offset:2px}
+.case{display:flex;gap:10px;align-items:center;font-weight:500}
+.case input{width:20px;height:20px;accent-color:var(--ink)}
+.depot{border:1px dashed var(--line);border-radius:12px;padding:12px;display:grid;gap:8px;justify-items:start}
+.apercu{max-height:200px;border-radius:10px}
+.actions{display:flex;flex-wrap:wrap;gap:8px;justify-content:space-between;align-items:center;position:sticky;bottom:0;background:var(--surface);padding-top:8px}
+.actions .g{display:flex;gap:8px;margin-left:auto}
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(24px + env(safe-area-inset-bottom,0px));z-index:30;background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:999px;font-size:.88rem;font-weight:500;max-width:calc(100vw - 32px)}
+@media (max-width:899px){#toast{bottom:calc(var(--nav-h) + 84px + env(safe-area-inset-bottom,0px))}}
+/* identifiant */
+.moi{border:1px solid rgba(255,255,255,.25);background:transparent;color:var(--on-deep);border-radius:999px;padding:5px 11px;font-weight:700;font-size:.82rem;display:inline-flex;gap:7px;align-items:center;white-space:nowrap}
+.moi i{width:10px;height:10px;border-radius:50%;background:var(--jaune)}
+.mob{display:none!important}
+@media (max-width:899px){.mob{display:inline-flex!important}.entete .etat span{display:none}}
+
+/* carte */
+.barre-carte{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.barre-carte .seg{flex:0 1 auto}
+.nuance{width:28px;height:28px;border-radius:50%;border:3px solid var(--surface);box-shadow:0 0 0 1px var(--line);background:var(--c);padding:0}
+.nuance[aria-pressed="true"]{box-shadow:0 0 0 2px var(--ink)}
+.fichier{position:relative;overflow:hidden}
+.fichier input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.carte-zone{position:relative;overflow:hidden;height:calc(100dvh - 300px);min-height:360px;border-radius:var(--r);border:1px solid var(--line);background:#f1f2f5;touch-action:none;user-select:none;-webkit-user-select:none;cursor:grab}
+.carte-zone.dessin,.carte-zone.lieu{cursor:crosshair}
+@media (max-width:899px){.carte-zone{height:calc(100dvh - 330px - var(--nav-h))}}
+#plan{position:absolute;left:0;top:0;transform-origin:0 0}
+#plan img{max-width:none;display:block;pointer-events:none}
+#plan svg{position:absolute;left:0;top:0;overflow:visible;pointer-events:none}
+.hit{pointer-events:none}
+.hit.tr{pointer-events:stroke;cursor:pointer}
+.carte-zone.gomme .hit.de{pointer-events:stroke;cursor:not-allowed}
+#marques{position:absolute;inset:0;pointer-events:none}
+.pin{position:absolute;left:0;top:0;pointer-events:auto;border:0;background:transparent;padding:0}
+.pin.lieu{display:flex;align-items:center;gap:6px;margin:-8px 0 0 -8px}
+.pin.lieu i{width:16px;height:16px;background:var(--jaune);border:2px solid #17302a;transform:rotate(45deg);flex:none}
+.pin.lieu span{background:var(--surface);color:var(--ink);border-radius:6px;padding:1px 6px;font-size:.75rem;font-weight:700;box-shadow:0 1px 3px rgba(0,0,0,.25);white-space:nowrap}
+.pin.photo{width:44px;height:44px;margin:-22px 0 0 -22px}
+.pin.photo .cone{position:absolute;inset:0;border-radius:50%;background:conic-gradient(from -30deg,rgba(242,183,5,.8) 0 60deg,transparent 60deg)}
+.pin.photo b{position:absolute;left:14px;top:14px;width:16px;height:16px;border-radius:50%;background:#17302a;border:3px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.35)}
+.zoom{position:absolute;right:10px;top:10px;display:grid;gap:6px;z-index:2}
+.zoom .btn{box-shadow:0 1px 4px rgba(0,0,0,.2)}
+.galerie{display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:6px}
+.galerie img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;background:var(--sunk)}
+
+/* questionnaire */
+.q{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:start;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.q .n{font:700 1.3rem/1 var(--display);color:var(--muted);min-width:22px}
+.q .fl{display:flex;gap:4px}
+.q .fl button{border:1px solid var(--line);background:var(--surface);border-radius:8px;width:30px;height:30px;padding:0;display:grid;place-items:center}
+.compo{background:var(--surface);border:2px solid var(--jaune);border-radius:var(--r);padding:14px;display:grid;gap:10px}
+.compo textarea,.feuille textarea,.feuille input[type=text]{width:100%;border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:10px 12px}
+fieldset{border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:grid;gap:8px;margin:0;min-width:0}
+legend{font-weight:700;padding:0 6px}
+.lien{display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:var(--sunk);border-radius:12px;padding:10px 12px;font-size:.85rem}
+.lien code{overflow-wrap:anywhere;flex:1 1 220px}
+.res{display:grid;grid-template-columns:64px minmax(0,1fr) 34px;gap:8px;align-items:center;font-size:.85rem}
+.jauge{height:10px;background:var(--sunk);border-radius:999px;overflow:hidden}
+.jauge i{display:block;height:100%;background:var(--c)}
+.citation{border-left:3px solid var(--line);padding:2px 0 2px 10px;margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
+@media (prefers-reduced-motion:no-preference){
+  .creneau,.post,.tache{transition:border-color .15s}
+  dialog[open]{animation:monte .18s ease-out}
+  @keyframes monte{from{transform:translateY(12px);opacity:.6}to{transform:none;opacity:1}}
+}
+</style>
+<style>
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0}img{max-width:100%}[hidden]{display:none!important}
+.pin.ici{width:22px;height:22px;margin:-11px 0 0 -11px;border-radius:50%;background:#2d6a9f;border:3px solid #fff;box-shadow:0 0 0 7px rgba(45,106,159,.25);pointer-events:none}
+</style>
+</head><body>
+
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-auj" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+  <symbol id="i-sem" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></symbol>
+  <symbol id="i-tac" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"/></symbol>
+  <symbol id="i-mur" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></symbol>
+  <symbol id="i-con" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h12a4 4 0 0 1 4 4v12H8a4 4 0 0 1-4-4z"/><path d="M8 9h8M8 13h8M8 17h5"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-loupe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></symbol>
+  <symbol id="i-lieu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></symbol>
+  <symbol id="i-gens" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M18 14a6 6 0 0 1 3.5 6"/></symbol>
+  <symbol id="i-ok" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></symbol>
+  <symbol id="i-g" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></symbol>
+  <symbol id="i-d" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></symbol>
+  <symbol id="i-carte" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2z"/><path d="M9 4v14M15 6v14"/></symbol>
+  <symbol id="i-q" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5h10M9 12h10M9 19h10"/><path d="M4 5h.01M4 12h.01M4 19h.01"/></symbol>
+  <symbol id="i-haut" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></symbol>
+  <symbol id="i-bas" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></symbol>
+  <symbol id="i-lune" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></symbol>
+  <symbol id="i-pin" viewBox="0 0 24 24" fill="currentColor"><path d="M15 3l6 6-3 1-4 4 1 5-2 2-4-4-5 5-1-1 5-5-4-4 2-2 5 1 4-4z"/></symbol>
+</svg>
+
+<header class="pad">
+  <div class="entete">
+    <div class="marque"><b>Planning <span>Atlas</span></b><small>Workshop S5 · Hanoï</small></div>
+    <div class="onglets" id="ongletsHaut"></div>
+    <button class="moi mob" data-vue="consignes" aria-label="Consignes"><svg width="16" height="16"><use href="#i-con"/></svg></button>
+    <button class="moi" id="themeBtn" aria-label="Passer en thème sombre" title="Clair / sombre"><svg width="16" height="16"><use href="#i-lune"/></svg></button>
+    <button class="moi" id="moiBtn" hidden><i></i><span></span></button>
+    <div class="etat" id="etat"><i></i><span>Connexion…</span></div>
+  </div>
+</header>
+<datalist id="pseudos"></datalist>
+<main class="pad">
+  <div id="info" class="bandeau" hidden></div>
+  <div class="outils" id="outils" hidden>
+    <div class="recherche"><svg width="16" height="16"><use href="#i-loupe"/></svg><input type="search" id="filtre" placeholder="Chercher un nom, un lieu, un thème" aria-label="Chercher"></div>
+  </div>
+  <section id="vue"></section>
+</main>
+<nav class="bas"><div class="onglets" id="ongletsBas"></div></nav>
+<button class="fab" id="fab"><svg width="20" height="20"><use href="#i-plus"/></svg><span></span></button>
+<dialog id="dlg"><form id="formulaire" method="dialog"></form></dialog>
+<div id="toast" hidden role="status"></div>
+
+
+<dialog id="entree"><form id="fEntree" style="display:grid;gap:14px;padding:22px">
+  <h3>Planning Atlas</h3>
+  <p class="qui" style="margin:0">Entre le code du groupe et ton prénom. Tu ne le feras qu'une fois sur cet appareil.</p>
+  <div class="champ"><label for="e_code">Code du groupe</label><input id="e_code" type="password" autocomplete="off" required></div>
+  <div class="champ"><label for="e_pseudo">Ton prénom ou identifiant</label><input id="e_pseudo" maxlength="30" autocomplete="nickname" required placeholder="ex. Luca"></div>
+  <p id="e_msg" class="retard" style="margin:0"></p>
+  <button class="btn jaune">Entrer</button>
+</form></dialog>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<script>
+const TYPES={terrain:"Terrain",atelier:"Atelier",rendu:"Rendu",reunion:"Réunion",autre:"Autre"};
+const STATUTS={afaire:"À faire",encours:"En cours",fait:"Fait"};
+const ORDRE=["afaire","encours","fait"];
+const ONGLETS=[["auj","Aujourd'hui","Jour","i-auj"],["semaine","Semaine","Semaine","i-sem"],["taches","Tâches","Tâches","i-tac"],["carte","Carte","Carte","i-carte"],["mur","Mur","Mur","i-mur"],["questionnaire","Questionnaire","Enquête","i-q"],["consignes","Consignes",null,"i-con"]];
+const FAB={auj:"Créneau",semaine:"Créneau",taches:"Tâche",mur:"Note ou photo",consignes:"Modifier"};
+const QTYPES={fermee:"Fermée : oui / non / autre",ouverte:"Ouverte : réponse écrite"};
+const COULEURS=["#c43d2b","#f2b705","#2f7a4f","#2d6a9f","#7b4fa6","#17302a"];
+const LIEN_Q=location.origin+location.pathname+"#questionnaire";
+/* fond de carte : rendu OSM de SiteScope, projection équirectangulaire (comme presentations/moteur/carte.js) */
+const CARTE={src:"fond-carte.jpg",W:3600,H:2446,bbox:[105.818,21.028,105.900,21.080]};
+CARTE.kx=Math.cos((CARTE.bbox[1]+CARTE.bbox[3])/2*Math.PI/180);CARTE.ech=CARTE.W/((CARTE.bbox[2]-CARTE.bbox[0])*CARTE.kx);
+const versPx=(lon,lat)=>[(lon-CARTE.bbox[0])*CARTE.kx*CARTE.ech,(CARTE.bbox[3]-lat)*CARTE.ech];
+const versGeo=(x,y)=>[CARTE.bbox[0]+x/(CARTE.kx*CARTE.ech),CARTE.bbox[3]-y/CARTE.ech];
+
+const FORMS={
+  creneaux:{nom:"Créneau",champs:[
+    ["titre","Quoi","text",1,null,"ex. Relevé des berges, station 3"],["type","Type","choix",0,TYPES],
+    ["date","Jour","date",1],["debut","Début","time"],["fin","Fin","time"],
+    ["lieu","Lieu","text",0,null,"ex. Bãi Giữa, rive nord"],["qui","Qui","text",0,null,"Noms séparés par des virgules, ou « tous »"],
+    ["consignes","Consignes et matériel","textarea",0,null,"Rendez-vous, matériel à prendre, ce qu'on doit rapporter…"]]},
+  taches:{nom:"Tâche",champs:[
+    ["titre","Tâche","text",1],["statut","Statut","choix",0,STATUTS],["responsable","Responsable","text"],
+    ["echeance","Échéance","date"],["theme","Thème ou groupe","text",0,null,"ex. BG1, TS3, commun"],["detail","Détail","textarea"]]},
+  mur:{nom:"Note ou photo",champs:[
+    ["photo","Photo","photo"],["texte","Description","textarea",0,null,"Ce qu'on voit, ce qu'on a observé…"],["lieu","Lieu associé","lieu"],["theme","Thème","text"],["epingle","Épingler sur « Aujourd'hui »","checkbox"]]},
+  lieux:{nom:"Lieu",champs:[["nom","Nom du lieu","text",1,null,"ex. Rampe du marché"],["note","Notes sur ce lieu","textarea",0,null,"Ambiance, usages, ce qui change selon l'heure ou le niveau de l'eau…"]]},
+  traces:{nom:"Trajet",champs:[["nom","Nom du trajet","text",1]]},
+  questions:{nom:"Question",champs:[["texte","Question","textarea",1],["type","Type","choix",0,QTYPES]]},
+  membres:{nom:"Identifiant",champs:[["pseudo","Ton prénom ou identifiant","text",1,null,"ex. Luca"]]},
+  consignes:{nom:"Consignes communes",champs:[["texte","Consignes","textarea",0,null,"Nommage des fichiers, sources, légendes, éthique des entretiens…"]]}
+};
+const COLS=["creneaux","taches","mur","lieux","traces","traits","questions","reponses","membres"];
+const S={creneaux:[],taches:[],mur:[],lieux:[],traces:[],traits:[],questions:[],reponses:[],membres:[],consignes:null,
+  moi:null,ecrire:true,vue:"auj",semaine:0,jour:null,type:"",statut:"afaire",theme:"",filtre:"",moiSeul:false,
+  outil:"main",couleur:COULEURS[0],calques:{traits:true,traces:true,photos:true,lieux:true},qmode:"repondre",
+  seulQ:location.hash==="#questionnaire",identite:false};
+let db=null,user=null,assets=null;
+
+const $=s=>document.querySelector(s);
+const ic=(id,w=18)=>`<svg width="${w}" height="${w}" aria-hidden="true"><use href="#${id}"/></svg>`;
+const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const iso=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+const parse=s=>{const [y,m,d]=String(s).split("-").map(Number);return new Date(y,m-1,d)};
+const auj=()=>iso(new Date());
+const plus=(s,n)=>{const d=parse(s);d.setDate(d.getDate()+n);return iso(d)};
+const lundiDe=s=>plus(s,-((parse(s).getDay()+6)%7));
+const fmt=(s,o)=>parse(s).toLocaleDateString("fr-FR",o);
+const court=s=>fmt(s,{day:"numeric",month:"short"});
+const quand=t=>t?new Date(t).toLocaleString("fr-FR",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}):"";
+const minutes=h=>{if(!h)return null;const [a,b]=h.split(":").map(Number);return a*60+b};
+const cherche=(o,...k)=>!S.filtre||k.some(x=>String(o[x]??"").toLowerCase().includes(S.filtre));
+const parHeure=(a,b)=>(a.debut||"99").localeCompare(b.debut||"99");
+const typeDe=c=>TYPES[c.type]?c.type:"autre";
+const statutDe=t=>STATUTS[t.statut]?t.statut:"afaire";
+const auteur=o=>o&&o.par?`<span data-uid="${esc(o.par)}">…</span>`:"quelqu'un";
+const dans=m=>m<60?`dans ${m} min`:`dans ${Math.floor(m/60)} h${m%60?String(m%60).padStart(2,"0"):""}`;
+const pseudoDe=id=>{const m=S.membres.find(x=>x.id===id);return m&&m.pseudo||""};
+const monPseudo=()=>pseudoDe(S.moi);
+const couleurDe=id=>{let h=0;for(const c of String(id))h=(h*31+c.charCodeAt(0))>>>0;return COULEURS[h%COULEURS.length]};
+const cap8=c=>["N","NE","E","SE","S","SO","O","NO"][Math.round(((c%360)+360)%360/45)%8];
+const nomLieu=id=>{const l=S.lieux.find(x=>x.id===id);return l?l.nom:""};
+/* « moi » : mon identifiant apparaît dans « qui » / « responsable », ou le créneau est pour tous */
+const estMoi=txt=>{const p=monPseudo().toLowerCase();const t=String(txt||"").toLowerCase();return !!p&&(t.split(/[,;\/]| et /).some(x=>x.trim()===p)||t.includes(p))};
+function toast(t){const e=$("#toast");e.textContent=t;e.hidden=false;clearTimeout(toast.h);toast.h=setTimeout(()=>e.hidden=true,3200)}
+
+/* ---------- cartes ---------- */
+function carteCreneau(c,{etat=false}={}){
+  const t=typeDe(c);let cls="",badge="";
+  if(etat&&c.date===auj()){
+    const n=new Date(),now=n.getHours()*60+n.getMinutes(),d=minutes(c.debut),f=minutes(c.fin)??(d!=null?d+60:null);
+    if(d!=null&&f!=null&&now>=f)cls=" passe";
+    else if(d!=null&&now>=d){cls=" encours";badge=`<span class="badge">En cours</span>`}
+    else if(d!=null&&d-now<=180)badge=`<span class="badge">${dans(d-now)}</span>`;
+  }
+  return `<button class="creneau${cls}" style="--c:var(--t-${t})" data-ouvrir="creneaux" data-id="${esc(c.id)}">
+    <span class="heure">${esc(c.debut||"—")}${c.fin?`<small>${esc(c.fin)}</small>`:""}</span>
+    <span class="type"><span class="pastille" style="--c:var(--t-${t})"></span>${TYPES[t]} ${badge}</span>
+    <span class="titre">${esc(c.titre)}</span>
+    ${c.lieu||c.qui?`<span class="meta">${c.lieu?`<span>${ic("i-lieu",13)}${esc(c.lieu)}</span>`:""}${c.qui?`<span>${ic("i-gens",13)}${esc(c.qui)}</span>`:""}</span>`:""}
+  </button>`;
+}
+function carteTache(t){
+  const st=statutDe(t),tard=t.echeance&&t.echeance<auj()&&st!=="fait";
+  const suiv=ORDRE[(ORDRE.indexOf(st)+1)%3];
+  return `<div class="tache ${st}" style="--c:var(--s-${st})">
+    <button class="rond ${st}" data-statut="${suiv}" data-id="${esc(t.id)}" aria-label="${STATUTS[st]} : passer à « ${STATUTS[suiv]} »" title="Passer à « ${STATUTS[suiv]} »">${st==="fait"?ic("i-ok",14):""}</button>
+    <button class="corps" data-ouvrir="taches" data-id="${esc(t.id)}">
+      <span class="titre">${esc(t.titre)}</span>
+      <span class="meta">${t.theme?`<span class="etiquette">${esc(t.theme)}</span>`:""}${t.responsable?`<span>${esc(t.responsable)}</span>`:""}${t.echeance?`<span class="${tard?"retard":""}">${tard?"En retard · ":""}${esc(fmt(t.echeance,{weekday:"short",day:"numeric",month:"short"}))}</span>`:""}</span>
+    </button>
+  </div>`;
+}
+function post(m){
+  const lieu=nomLieu(m.lieu);
+  return `<button class="post" data-ouvrir="mur" data-id="${esc(m.id)}">
+    ${m.photo?`<img src="${esc(photoUrl(m.photo))}" alt="${esc(m.texte||"Photo du groupe")}" loading="lazy">`:""}
+    <span class="c">
+      ${m.epingle?`<span class="epingle">${ic("i-pin",12)}Épinglé</span>`:""}
+      ${m.texte?`<p>${esc(m.texte)}</p>`:""}
+      <span class="pied">${lieu?`<span class="etiquette">${ic("i-lieu",11)} ${esc(lieu)}</span>`:""}${m.theme?`<span class="etiquette">${esc(m.theme)}</span>`:""}${m.lat!=null?`<span>sur la carte${m.cap!=null?`, vers ${cap8(m.cap)}`:""}</span>`:""}<span>${auteur(m)} · ${esc(quand(m.cree))}</span></span>
+    </span>
+  </button>`;
+}
+const vide=(txt,col,lab,date)=>`<div class="vide">${txt}${col&&S.ecrire?`<br><button class="btn" data-ouvrir="${col}"${date?` data-date="${date}"`:""}>${ic("i-plus",14)}${lab}</button>`:""}</div>`;
+const bascMoi=()=>monPseudo()?`<div class="seg" role="group" aria-label="Afficher"><button data-moiseul="0" aria-pressed="${!S.moiSeul}">Tout le groupe</button><button data-moiseul="1" aria-pressed="${S.moiSeul}">Moi (${esc(monPseudo())})</button></div>`:"";
+
+/* ---------- vues ---------- */
+const VUES={
+  auj(){
+    const j=auj(),dem=plus(j,1);
+    const pourMoi=c=>!S.moiSeul||estMoi(c.qui)||/tous/i.test(c.qui||"");
+    const cr=S.creneaux.filter(c=>c.date===j&&pourMoi(c)).sort(parHeure);
+    const crD=S.creneaux.filter(c=>c.date===dem&&pourMoi(c)).sort(parHeure);
+    const ta=S.taches.filter(t=>statutDe(t)!=="fait"&&(!S.moiSeul||estMoi(t.responsable))&&(statutDe(t)==="encours"||(t.echeance&&t.echeance<=dem))).sort((a,b)=>(a.echeance||"9").localeCompare(b.echeance||"9"));
+    const ep=S.mur.filter(m=>m.epingle).sort((a,b)=>(b.cree||0)-(a.cree||0));
+    return `<div class="tete"><h1>${esc(fmt(j,{weekday:"long",day:"numeric",month:"long"}))}<small>${monPseudo()?`Bonjour ${esc(monPseudo())} · `:""}${cr.length?`${cr.length} créneau${cr.length>1?"x":""} aujourd'hui`:"Rien de prévu aujourd'hui"}${ta.length?` · ${ta.length} tâche${ta.length>1?"s":""} à suivre`:""}</small></h1>${bascMoi()}</div>
+    <div class="grille">
+      <div class="pile">
+        <div class="section"><h2>Aujourd'hui</h2><div class="liste">${cr.map(c=>carteCreneau(c,{etat:true})).join("")||vide("Aucun créneau aujourd'hui.","creneaux","Ajouter un créneau",j)}</div></div>
+        <div class="section"><h2>Demain · ${esc(fmt(dem,{weekday:"long",day:"numeric"}))}</h2><div class="liste">${crD.map(c=>carteCreneau(c)).join("")||`<p class="vide">Rien de prévu demain.</p>`}</div></div>
+      </div>
+      <div class="pile">
+        <div class="section"><h2>${S.moiSeul?"Mes tâches":"Tâches"} en cours ou pour demain</h2><div class="liste">${ta.map(carteTache).join("")||`<p class="vide">Aucune tâche urgente.</p>`}</div></div>
+        ${ep.length?`<div class="section"><h2>Épinglé</h2><div class="liste">${ep.map(post).join("")}</div></div>`:""}
+      </div>
+    </div>`;
+  },
+  semaine(){
+    const j=auj(),l=plus(lundiDe(j),7*S.semaine);
+    if(!S.jour||S.jour<l||S.jour>plus(l,6))S.jour=S.semaine===0?j:l;
+    const garde=c=>cherche(c,"titre","lieu","qui","consignes")&&(!S.type||typeDe(c)===S.type);
+    const du=s=>S.creneaux.filter(c=>c.date===s&&garde(c)).sort(parHeure);
+    const nom=S.semaine===0?"Cette semaine":S.semaine===1?"Semaine prochaine":S.semaine===-1?"Semaine dernière":`Semaine du ${court(l)}`;
+    const jours=[...Array(7)].map((_,k)=>plus(l,k));
+    const puces=`<div class="puces" role="group" aria-label="Type">${[["","Tous"],...Object.entries(TYPES)].map(([k,v])=>`<button data-type="${k}" aria-pressed="${S.type===k}">${k?`<span class="pastille" style="--c:var(--t-${k})"></span>`:""}${v}</button>`).join("")}</div>`;
+    return `<div class="tete"><h1>${nom}<small>du ${esc(fmt(l,{day:"numeric",month:"long"}))} au ${esc(fmt(plus(l,6),{day:"numeric",month:"long"}))}</small></h1>
+      <div class="outils"><button class="btn ico" data-sem="-1" aria-label="Semaine précédente">${ic("i-g")}</button>${S.semaine?`<button class="btn" data-sem="0">Aujourd'hui</button>`:""}<button class="btn ico" data-sem="1" aria-label="Semaine suivante">${ic("i-d")}</button></div></div>
+    ${puces}
+    <div class="mobile-sem">
+      <div class="bande">${jours.map(s=>`<button data-jour="${s}" aria-pressed="${s===S.jour}" class="${s===j?"auj":""} ${du(s).length?"a":""}" aria-label="${esc(fmt(s,{weekday:"long",day:"numeric"}))}"><small>${esc(fmt(s,{weekday:"short"}).replace(".",""))}</small><b>${parse(s).getDate()}</b><i></i></button>`).join("")}</div>
+      <div class="section"><h2>${esc(fmt(S.jour,{weekday:"long",day:"numeric",month:"long"}))}</h2><div class="liste">${du(S.jour).map(c=>carteCreneau(c,{etat:true})).join("")||vide("Rien de prévu ce jour-là.","creneaux","Ajouter un créneau",S.jour)}</div></div>
+    </div>
+    <div class="sept">${jours.map(s=>`<div class="col7${s===j?" auj":""}"><div class="j"><b>${parse(s).getDate()}</b><small>${esc(fmt(s,{weekday:"long"}))}</small></div>
+      ${du(s).map(c=>carteCreneau(c,{etat:true})).join("")}<button class="ajout" data-ouvrir="creneaux" data-date="${s}">+ Ajouter</button></div>`).join("")}</div>`;
+  },
+  taches(){
+    const t=S.taches.filter(x=>cherche(x,"titre","responsable","theme","detail")&&(!S.moiSeul||estMoi(x.responsable)));
+    const par=s=>t.filter(x=>statutDe(x)===s).sort((a,b)=>(a.echeance||"9").localeCompare(b.echeance||"9"));
+    const tard=t.filter(x=>x.echeance&&x.echeance<auj()&&statutDe(x)!=="fait").length;
+    return `<div class="tete"><h1>Tâches<small>${t.length-par("fait").length} à terminer${tard?` · <span class="retard">${tard} en retard</span>`:""}</small></h1>${bascMoi()}</div>
+    <div class="seg taches" role="group" aria-label="Statut">${ORDRE.map(s=>`<button data-vstatut="${s}" aria-pressed="${S.statut===s}">${STATUTS[s]} · ${par(s).length}</button>`).join("")}</div>
+    <div class="colonnes">${ORDRE.map(s=>`<div class="col${S.statut===s?" sel":""}"><h2><span>${STATUTS[s]}</span><span class="n">${par(s).length}</span></h2>
+      ${par(s).map(carteTache).join("")||(s==="afaire"?vide("Aucune tâche à faire.","taches","Ajouter une tâche"):`<p class="vide">Vide</p>`)}</div>`).join("")}</div>`;
+  },
+  mur(){
+    const themes=[...new Set(S.mur.map(m=>m.theme).filter(Boolean))].sort();
+    if(S.theme&&!themes.includes(S.theme))S.theme="";
+    const m=S.mur.filter(x=>cherche(x,"texte","theme")&&(!S.theme||x.theme===S.theme)).sort((a,b)=>(b.epingle?1:0)-(a.epingle?1:0)||(b.cree||0)-(a.cree||0));
+    return `<div class="tete"><h1>Mur<small>Notes, croquis et photos du terrain</small></h1></div>
+    ${themes.length?`<div class="puces">${[["","Tout"],...themes.map(x=>[x,x])].map(([k,v])=>`<button data-theme="${esc(k)}" aria-pressed="${S.theme===k}">${esc(v)}</button>`).join("")}</div>`:""}
+    ${m.length?`<div class="mur">${m.map(post).join("")}</div>`:vide("Aucune note pour l'instant. Ajoute une observation, un croquis ou une photo.","mur","Ajouter une note")}`;
+  },
+  carte(){
+    return `<div class="tete"><h1>Carte<small>Bãi Giữa et ses rives · fond OpenStreetMap (SiteScope)</small></h1></div>
+    <div class="barre-carte" id="barreCarte"></div>
+    <div class="carte-zone" id="carte">
+      <div id="plan" style="width:${CARTE.W}px;height:${CARTE.H}px"><img src="${CARTE.src}" width="${CARTE.W}" height="${CARTE.H}" alt="Fond de carte : bâti, rues et eau autour de Bãi Giữa" draggable="false"><svg id="svgc" width="${CARTE.W}" height="${CARTE.H}" viewBox="0 0 ${CARTE.W} ${CARTE.H}"></svg></div>
+      <div id="marques"></div>
+      <div class="zoom"><button class="btn ico" data-zoom="1.5" aria-label="Zoomer">${ic("i-plus")}</button><button class="btn ico" data-zoom="0.66" aria-label="Dézoomer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14"/></svg></button><button class="btn ico" data-zoom="0" aria-label="Recentrer sur le banc">${ic("i-lieu")}</button></div>
+    </div>
+    <p class="qui">« Enregistrer mon trajet » suit ta position pendant la marche : garde la page ouverte, écran allumé. On peut aussi importer un fichier GPX. Les photos se placent seules sur la carte.</p>`;
+  },
+  questionnaire(){
+    const qs=[...S.questions].sort((a,b)=>(a.ordre||0)-(b.ordre||0));
+    const seg=`<div class="seg" role="group" aria-label="Questionnaire">${[["repondre","Répondre"],["questions",`Questions · ${qs.length}`],["resultats",`Réponses · ${S.reponses.length}`]].map(([k,v])=>`<button data-qmode="${k}" aria-pressed="${S.qmode===k}">${v}</button>`).join("")}</div>`;
+    let corps="";
+    if(S.qmode==="questions"){
+      corps=`<div class="liste">${qs.map((q,i)=>`<div class="q"><span class="n">${i+1}</span><div><div class="titre" style="font-weight:700;overflow-wrap:anywhere">${esc(q.texte)}</div><span class="qui">${q.type==="ouverte"?"Ouverte":"Fermée (oui / non / autre)"} · ${auteur(q)}</span></div>
+        <div class="fl"><button data-qmonte="${esc(q.id)}" aria-label="Monter"${i?"":" disabled"}>${ic("i-haut",14)}</button><button data-qdescend="${esc(q.id)}" aria-label="Descendre"${i<qs.length-1?"":" disabled"}>${ic("i-bas",14)}</button><button data-ouvrir="questions" data-id="${esc(q.id)}" aria-label="Modifier">✎</button></div></div>`).join("")||`<p class="vide">Aucune question pour l'instant : écris la première ci-dessous.</p>`}</div>
+      ${S.ecrire&&db?`<div class="compo"><label for="qtexte" style="font-weight:700">Nouvelle question</label><textarea id="qtexte" rows="2" placeholder="ex. Depuis combien de temps habitez-vous sur le banc ?"></textarea>
+        <div class="choix" role="radiogroup">${Object.entries(QTYPES).map(([k,v],i)=>`<label><input type="radio" name="qtype" id="qtype_${k}" value="${k}"${i?"":" checked"}><span>${v}</span></label>`).join("")}</div>
+        <div><button class="btn jaune" data-qajout="1">${ic("i-plus",14)}Ajouter au questionnaire</button></div></div>`:""}
+      <div class="lien"><span>Lien direct vers le questionnaire seul :</span><code>${esc(LIEN_Q)}</code><button class="btn" data-copier="${esc(LIEN_Q)}">Copier</button></div>`;
+    }else if(S.qmode==="resultats"){
+      const reps=[...S.reponses].sort((a,b)=>(b.quand||0)-(a.quand||0));
+      corps=qs.length?qs.map((q,i)=>{
+        const r=reps.map(x=>x.rep&&x.rep[q.id]).filter(x=>x&&(x.v||x.autre));
+        if(q.type==="ouverte")return `<div class="feuille"><h2>${i+1}. ${esc(q.texte)}</h2>${r.map(x=>`<p class="citation">${esc(x.v)}</p>`).join("")||`<p class="vide">Pas encore de réponse.</p>`}</div>`;
+        const n=k=>r.filter(x=>x.v===k).length,tot=r.length||1;
+        return `<div class="feuille"><h2>${i+1}. ${esc(q.texte)}</h2>${[["oui","Oui","var(--s-fait)"],["non","Non","var(--alerte)"],["autre","Autre","var(--s-encours)"]].map(([k,l,c])=>`<div class="res"><span>${l}</span><span class="jauge" style="--c:${c}"><i style="width:${Math.round(n(k)/tot*100)}%"></i></span><b>${n(k)}</b></div>`).join("")}
+          ${r.filter(x=>x.autre).map(x=>`<p class="citation">${esc(x.autre)}</p>`).join("")}</div>`;}).join(""):`<p class="vide">Écris d'abord des questions.</p>`;
+      corps+=`<div class="feuille"><h2>Fiches enregistrées · ${reps.length}</h2>${reps.map((x,i)=>`<div class="barre" style="display:flex;flex-wrap:wrap;gap:8px;justify-content:space-between"><span>N° ${reps.length-i} · ${esc(quand(x.quand))}${x.lieu?` · ${esc(x.lieu)}`:""}${x.profil?` · ${esc(x.profil)}`:""} · ${auteur(x)}</span>${S.ecrire?`<button class="btn rouge" data-supprep="${esc(x.id)}">Supprimer</button>`:""}</div>`).join("")||`<p class="vide">Aucune fiche.</p>`}</div>`;
+    }else{
+      corps=qs.length?`<form class="feuille" id="fiche"><div class="duo"><div class="champ"><label for="r_lieu">Lieu de l'entretien</label><input type="text" id="r_lieu" placeholder="ex. Marché du banc"></div>
+        <div class="champ"><label for="r_profil">Profil (facultatif)</label><input type="text" id="r_profil" placeholder="ex. agricultrice, ~50 ans"></div></div>
+        ${qs.map((q,i)=>`<fieldset><legend>${i+1}. ${esc(q.texte)}</legend>${q.type==="ouverte"?`<textarea id="r_${esc(q.id)}" rows="3" aria-label="Réponse"></textarea>`
+          :`<div class="choix">${[["oui","Oui"],["non","Non"],["autre","Autre"]].map(([k,l])=>`<label><input type="radio" name="r_${esc(q.id)}" id="r_${esc(q.id)}_${k}" value="${k}"><span>${l}</span></label>`).join("")}</div><input type="text" id="ra_${esc(q.id)}" placeholder="Préciser (facultatif)">`}</fieldset>`).join("")}
+        <div><button class="btn jaune">Enregistrer cette fiche</button></div></form>`:`<p class="vide">Aucune question pour l'instant. Va dans « Questions » pour les écrire.</p>`;
+    }
+    return `<div class="tete"><h1>Questionnaire<small>${S.reponses.length} fiche${S.reponses.length>1?"s":""} remplie${S.reponses.length>1?"s":""}</small></h1>${seg}</div>${corps}`;
+  },
+  consignes(){
+    const c=S.consignes;
+    return `<div class="tete"><h1>Consignes communes<small>Une seule version pour tout le groupe</small></h1></div>
+    <div class="feuille">${c&&c.texte?`<p class="texte">${esc(c.texte)}</p><span class="qui">Modifié par ${auteur(c)} · ${esc(quand(c.maj))}</span>`
+      :`<p class="texte" style="color:var(--muted)">Les règles décidées ensemble : nommer les fichiers, citer les sources, légender les cartes, mener un entretien. Elles gardent nos recherches cohérentes entre les groupes.</p>`}</div>`;
+  }
+};
+
+async function nommer(racine){
+  const els=[...racine.querySelectorAll("[data-uid]")];if(!els.length)return;
+  const manque=[...new Set(els.map(e=>e.dataset.uid).filter(id=>!pseudoDe(id)))];
+  const ps=manque.length&&user?await user.profiles(manque):{};
+  els.forEach(e=>e.textContent=pseudoDe(e.dataset.uid)||(ps[e.dataset.uid]&&ps[e.dataset.uid].name)||"quelqu'un");
+}
+/* garde ce qu'on est en train d'écrire quand les données des autres arrivent */
+function sauver(v){const a=document.activeElement;return {f:[...v.querySelectorAll("input[id],textarea[id]")].map(e=>[e.id,e.value,e.checked]),a:a&&v.contains(a)?a.id:null,s:a&&a.selectionStart}}
+function restaurer(v,g){for(const [id,val,ch] of g.f){const e=document.getElementById(id);if(!e||!v.contains(e))continue;if(e.type==="radio"||e.type==="checkbox")e.checked=ch;else if(e.type!=="file")e.value=val}
+  if(g.a){const e=document.getElementById(g.a);if(e){e.focus();try{if(g.s!=null)e.setSelectionRange(g.s,g.s)}catch(x){}}}}
+function render(){
+  if(S.seulQ)S.vue="questionnaire";
+  const ong=S.seulQ?"":ONGLETS.map(([k,v,c,i])=>`<button data-vue="${k}" aria-current="${S.vue===k?"page":"false"}">${ic(i,20)}<span>${v}</span></button>`).join("");
+  $("#ongletsHaut").innerHTML=ong;
+  $("#ongletsBas").innerHTML=S.seulQ?"":ONGLETS.filter(o=>o[2]).map(([k,v,c,i])=>`<button data-vue="${k}" aria-current="${S.vue===k?"page":"false"}">${ic(i,20)}<span>${c}</span></button>`).join("");
+  document.querySelector("nav.bas").hidden=S.seulQ;
+  $("#outils").hidden=!["semaine","taches","mur"].includes(S.vue);
+  const f=$("#fab");f.hidden=!S.ecrire||!db||!FAB[S.vue];f.querySelector("span").textContent=FAB[S.vue]||"";
+  $("#pseudos").innerHTML=S.membres.map(m=>`<option value="${esc(m.pseudo)}">`).join("");
+  const mb=$("#moiBtn");mb.hidden=!S.moi;mb.querySelector("span").textContent=monPseudo()||"Choisir mon identifiant";
+  const v=$("#vue");
+  if(S.vue==="carte"){if(!$("#carte")){v.innerHTML=VUES.carte();initCarte()}majCarte();return}
+  const g=sauver(v);v.innerHTML=VUES[S.vue]();restaurer(v,g);nommer(v);
+}
+
+/* ---------- carte : déplacer, zoomer, dessiner, lieux, photos, trajets ---------- */
+let cam=null;const ptrs=new Map();let geste=null,trait=null;
+function zone(){return $("#carte").getBoundingClientRect()}
+function appliquer(){$("#plan").style.transform=`translate(${cam.x}px,${cam.y}px) scale(${cam.k})`;placer()}
+function centrer(){const z=zone(),k=Math.min(Math.max(z.width/1500,z.height/1300),1);const [x,y]=versPx(105.857,21.053);cam={x:z.width/2-x*k,y:z.height/2-y*k,k};appliquer()}
+function zoomA(f,sx,sy){const z=zone(),kmin=Math.min(z.width/CARTE.W,z.height/CARTE.H)*.8,nk=Math.min(4,Math.max(kmin,cam.k*f));
+  cam.x=sx-(sx-cam.x)*nk/cam.k;cam.y=sy-(sy-cam.y)*nk/cam.k;cam.k=nk;appliquer()}
+const ecranVersImg=(cx,cy)=>{const z=zone();return [(cx-z.left-cam.x)/cam.k,(cy-z.top-cam.y)/cam.k]};
+function placer(){for(const e of document.querySelectorAll("#marques .pin"))e.style.transform=`translate(${cam.x+e.dataset.x*cam.k}px,${cam.y+e.dataset.y*cam.k}px)`}
+function barreCarte(){
+  const o=(k,l)=>`<button data-outil="${k}" aria-pressed="${S.outil===k}">${l}</button>`;
+  return `<div class="seg" role="group" aria-label="Outil">${o("main","Déplacer")}${S.ecrire?o("dessin","Dessiner")+o("gomme","Gomme")+o("lieu","+ Lieu"):""}</div>
+    ${S.outil==="dessin"?`<div class="g" role="group" aria-label="Couleur">${COULEURS.map(c=>`<button class="nuance" style="--c:${c}" data-nuance="${c}" aria-pressed="${S.couleur===c}" aria-label="Couleur ${c}"></button>`).join("")}<button class="btn" data-annuler-trait="1">Annuler mon dernier trait</button></div>`:""}
+    ${gpsBoutons()}${S.ecrire?`<span class="btn fichier">Importer un trajet GPX<input type="file" id="gpx" accept=".gpx,application/gpx+xml" multiple aria-label="Importer un trajet GPX"></span>`:""}
+    <div class="puces" role="group" aria-label="Calques">${[["traits","Dessins"],["traces","Trajets"],["photos","Photos"],["lieux","Lieux"]].map(([k,l])=>`<button data-calque="${k}" aria-pressed="${S.calques[k]}">${l}</button>`).join("")}</div>`;
+}
+const chemin=pts=>{let d="";for(let i=0;i<pts.length;i+=2){const [x,y]=versPx(pts[i],pts[i+1]);d+=(i?"L":"M")+x.toFixed(1)+","+y.toFixed(1)}return d};
+function majCarte(){
+  $("#barreCarte").innerHTML=barreCarte();
+  const z=$("#carte");z.className="carte-zone "+S.outil;
+  let h="";
+  if(S.calques.traces)for(const t of S.traces){const d=chemin(t.pts||[]);h+=`<path d="${d}" fill="none" stroke="${couleurDe(t.par)}" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity=".85" vector-effect="non-scaling-stroke"/><path class="hit tr" data-ouvrir="traces" data-id="${esc(t.id)}" d="${d}" fill="none" stroke="transparent" stroke-width="16" vector-effect="non-scaling-stroke"/>`}
+  if(S.calques.traits)for(const t of S.traits){const d=chemin(t.pts||[]);h+=`<path d="${d}" fill="none" stroke="${esc(t.couleur||COULEURS[0])}" stroke-width="${+t.ep||3}" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/><path class="hit de" data-trait="${esc(t.id)}" d="${d}" fill="none" stroke="transparent" stroke-width="18" vector-effect="non-scaling-stroke"/>`}
+  h+=`<path id="encours" fill="none" stroke="${S.couleur}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;
+  $("#svgc").innerHTML=h;
+  let m="";
+  if(S.calques.photos)for(const p of S.mur.filter(x=>x.lat!=null&&x.lon!=null)){const [x,y]=versPx(p.lon,p.lat);
+    m+=`<button class="pin photo" data-x="${x}" data-y="${y}" data-ouvrir="mur" data-id="${esc(p.id)}" aria-label="Photo : ${esc(p.texte||"sans description")}">${p.cap!=null?`<span class="cone" style="transform:rotate(${+p.cap}deg)"></span>`:""}<b></b></button>`}
+  if(S.calques.lieux)for(const l of S.lieux){const [x,y]=versPx(l.lon,l.lat);m+=`<button class="pin lieu" data-x="${x}" data-y="${y}" data-ouvrir="lieux" data-id="${esc(l.id)}"><i></i><span>${esc(l.nom)}</span></button>`}
+  m+=maPosMarque();$("#marques").innerHTML=m;placer();
+}
+function initCarte(){
+  const z=$("#carte");if(cam)appliquer();else centrer();
+  z.addEventListener("wheel",e=>{e.preventDefault();const r=zone();zoomA(e.deltaY<0?1.2:1/1.2,e.clientX-r.left,e.clientY-r.top)},{passive:false});
+  z.addEventListener("pointerdown",e=>{
+    if(e.target.closest(".pin,.zoom"))return;
+    if(S.outil==="gomme"){const t=e.target.closest("[data-trait]");if(t)supprimerTrait(t.dataset.trait);}
+    z.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    if(ptrs.size===2){trait=null;$("#encours").setAttribute("d","");const [a,b]=[...ptrs.values()];geste={type:"pinch",d:Math.hypot(a.x-b.x,a.y-b.y),mx:(a.x+b.x)/2,my:(a.y+b.y)/2};return}
+    if(S.outil==="dessin"){trait=[ecranVersImg(e.clientX,e.clientY)];geste=null;return}
+    geste={type:"pan",x0:e.clientX,y0:e.clientY,cx:cam.x,cy:cam.y,bouge:0};
+  });
+  z.addEventListener("pointermove",e=>{
+    if(!ptrs.has(e.pointerId))return;ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    if(geste&&geste.type==="pinch"&&ptrs.size===2){const [a,b]=[...ptrs.values()],d=Math.hypot(a.x-b.x,a.y-b.y),mx=(a.x+b.x)/2,my=(a.y+b.y)/2,r=zone();
+      cam.x+=mx-geste.mx;cam.y+=my-geste.my;zoomA(d/geste.d,mx-r.left,my-r.top);Object.assign(geste,{d,mx,my});return}
+    if(trait){const p=ecranVersImg(e.clientX,e.clientY),q=trait[trait.length-1];if(Math.hypot(p[0]-q[0],p[1]-q[1])*cam.k>2){trait.push(p);$("#encours").setAttribute("d","M"+trait.map(t=>t[0].toFixed(1)+","+t[1].toFixed(1)).join("L"))}return}
+    if(geste&&geste.type==="pan"){geste.bouge=Math.max(geste.bouge,Math.hypot(e.clientX-geste.x0,e.clientY-geste.y0));cam.x=geste.cx+e.clientX-geste.x0;cam.y=geste.cy+e.clientY-geste.y0;appliquer()}
+  });
+  const fin=e=>{
+    if(!ptrs.has(e.pointerId))return;ptrs.delete(e.pointerId);
+    if(trait&&ptrs.size===0){const t=trait;trait=null;if(t.length>1)enregistrerTrait(t);else $("#encours").setAttribute("d","")}
+    if(geste&&geste.type==="pan"&&geste.bouge<6&&S.outil==="lieu"&&e.type==="pointerup"){const [x,y]=ecranVersImg(e.clientX,e.clientY),[lon,lat]=versGeo(x,y);ouvrir("lieux",null,{lon:+lon.toFixed(6),lat:+lat.toFixed(6)})}
+    if(ptrs.size<2&&geste&&geste.type==="pinch"){geste=null;if(ptrs.size===1){const [p]=[...ptrs.values()];geste={type:"pan",x0:p.x,y0:p.y,cx:cam.x,cy:cam.y,bouge:99}}}
+    else if(ptrs.size===0)geste=null;
+  };
+  z.addEventListener("pointerup",fin);z.addEventListener("pointercancel",fin);
+}
+async function enregistrerTrait(t){
+  if(!db){toast("Connecte-toi à claude.ai pour dessiner.");return}
+  const pts=[];for(const [x,y] of t){const [lon,lat]=versGeo(x,y);pts.push(+lon.toFixed(6),+lat.toFixed(6))}
+  try{await db.collection("traits").doc().set({pts,couleur:S.couleur,ep:3,par:S.moi,cree:Date.now()})}catch(e){refus(e)}
+  const p=$("#encours");if(p)p.setAttribute("d","");
+}
+async function supprimerTrait(id){try{await db.collection("traits").doc(id).delete();toast("Trait effacé")}catch(e){refus(e)}}
+async function importerGpx(files){
+  for(const f of files){
+    try{
+      const x=new DOMParser().parseFromString(await f.text(),"application/xml");
+      const brut=[...x.querySelectorAll("trkpt,rtept")].map(p=>[+p.getAttribute("lon"),+p.getAttribute("lat")]).filter(p=>isFinite(p[0])&&isFinite(p[1]));
+      if(brut.length<2){toast(`${f.name} : aucun point de trajet trouvé.`);continue}
+      const gard=[brut[0]];for(const p of brut){const q=gard[gard.length-1];if(Math.hypot((p[0]-q[0])*111320*CARTE.kx,(p[1]-q[1])*110540)>4)gard.push(p)}
+      const pas=Math.ceil(gard.length/8000),pts=[];gard.forEach((p,i)=>{if(i%pas===0)pts.push(Math.round(p[0]*1e5)/1e5,Math.round(p[1]*1e5)/1e5)});
+      const t=[...x.querySelectorAll("time")].map(e=>e.textContent);
+      await db.collection("traces").doc().set({nom:f.name.replace(/\.gpx$/i,""),pts,debut:t[0]||null,fin:t[t.length-1]||null,par:S.moi,cree:Date.now()});
+      toast(`Trajet « ${f.name} » ajouté`);
+    }catch(e){if(e&&e.code)refus(e);else toast(`${f.name} : fichier GPX illisible.`)}
+  }
+}
+
+/* ---------- position et direction lues dans la photo (EXIF) ---------- */
+async function lireExifBrut(file){
+  try{
+    const b=new DataView(await file.slice(0,262144).arrayBuffer());if(b.getUint16(0)!==0xFFD8)return null;
+    let o=2;while(o<b.byteLength-10){const m=b.getUint16(o),l=b.getUint16(o+2);if(m===0xFFE1&&b.getUint32(o+4)===0x45786966)return tiff(b,o+10);if((m&0xFF00)!==0xFF00)break;o+=2+l}
+  }catch(e){}
+  return null;
+}
+function tiff(b,t){
+  const le=b.getUint16(t)===0x4949,u16=p=>b.getUint16(p,le),u32=p=>b.getUint32(p,le),rat=p=>u32(p)/(u32(p+4)||1);
+  const ifd=(p,f)=>{const n=u16(p);for(let i=0;i<n;i++){const e=p+2+i*12;f(u16(e),t+u32(e+8),e+8)}};
+  const r={};let gps=0,ex=0;
+  ifd(t+u32(t+4),(tag,off,v)=>{if(tag===0x8825)gps=u32(v);if(tag===0x8769)ex=u32(v)});
+  const dms=p=>rat(p)+rat(p+8)/60+rat(p+16)/3600;
+  if(gps)ifd(t+gps,(tag,off,v)=>{if(tag===1)r.ns=String.fromCharCode(b.getUint8(v));if(tag===3)r.eo=String.fromCharCode(b.getUint8(v));
+    if(tag===2)r.lat=dms(off);if(tag===4)r.lon=dms(off);if(tag===17)r.cap=Math.round(rat(off))});
+  if(ex)ifd(t+ex,(tag,off)=>{if(tag===0x9003){let s="";for(let i=0;i<19;i++)s+=String.fromCharCode(b.getUint8(off+i));r.prise=s}});
+  const out={};
+  if(r.lat!=null&&r.lon!=null&&(r.lat||r.lon)){out.lat=+(r.ns==="S"?-r.lat:r.lat).toFixed(6);out.lon=+(r.eo==="W"?-r.lon:r.lon).toFixed(6)}
+  if(r.cap!=null&&isFinite(r.cap))out.cap=r.cap;if(r.prise)out.prise=r.prise;
+  return out;
+}
+
+/* ---------- formulaire ---------- */
+let edit=null;
+const trouver=(col,id)=>col==="consignes"?S.consignes:S[col].find(x=>x.id===id);
+function ouvrir(col,id,defaut){
+  const f=FORMS[col];if(!f)return;
+  const o=id?{...(trouver(col,id)||{})}:{...defaut};
+  if(col==="taches"&&!o.statut)o.statut="afaire";
+  if(col==="questions"&&!o.type)o.type="fermee";
+  if(col==="creneaux"){if(!o.type)o.type=S.type||"terrain";if(!o.date)o.date=S.vue==="semaine"&&S.jour?S.jour:auj()}
+  edit={col,id,o,suppr:false,exif:null};
+  const ch={};
+  for(const [k,lab,type,req,opts,aide] of f.champs){
+    const v=o[k]??"",idc="f_"+k,liste=k==="qui"||k==="responsable"?` list="pseudos"`:"";
+    ch[k]=type==="textarea"?`<div class="champ"><label for="${idc}">${lab}</label><textarea id="${idc}" rows="${col==="consignes"?16:3}" placeholder="${esc(aide||"")}"${req?" required":""}>${esc(v)}</textarea></div>`
+    :type==="choix"?`<div class="champ"><span class="l">${lab}</span><div class="choix" role="radiogroup">${Object.entries(opts).map(([a,b])=>`<label><input type="radio" name="${idc}" value="${a}"${a===v?" checked":""}><span>${k==="type"&&TYPES[a]?`<span class="pastille" style="--c:var(--t-${a})"></span>`:""}${b}</span></label>`).join("")}</div></div>`
+    :type==="checkbox"?`<label class="case"><input type="checkbox" id="${idc}"${v?" checked":""}>${lab}</label>`
+    :type==="lieu"?`<div class="champ"><label for="${idc}">${lab}</label><select id="${idc}"><option value="">Aucun pour l'instant</option>${S.lieux.map(l=>`<option value="${esc(l.id)}"${l.id===v?" selected":""}>${esc(l.nom)}</option>`).join("")}</select></div>`
+    :type==="photo"?`<div class="champ"><span class="l">${lab}</span><div class="depot">${o.photo?`<img class="apercu" id="apercu" src="${esc(photoUrl(o.photo))}" alt="Photo actuelle">`:`<img class="apercu" id="apercu" alt="" hidden>`}
+      ${assets?`<input type="file" id="${idc}" accept="image/*">`:`<span class="qui">Ajouter une photo demande le niveau « Éditeur » sur cette page.</span>`}
+      <span class="qui" id="exifInfo">${o.lat!=null?`Placée sur la carte${o.cap!=null?`, vers ${cap8(o.cap)} (${o.cap}°)`:""}.`:""}</span></div></div>`
+    :`<div class="champ"><label for="${idc}">${lab}${req?" *":""}</label><input type="${type}" id="${idc}" value="${esc(v)}"${req?" required":""}${liste} placeholder="${esc(aide||"")}"${k==="pseudo"?' maxlength="30" autocomplete="nickname"':""}></div>`;
+  }
+  let corps=col==="creneaux"?ch.titre+ch.type+`<div class="duo trois">${ch.date}${ch.debut}${ch.fin}</div>`+ch.lieu+ch.qui+ch.consignes
+    :col==="taches"?ch.titre+ch.statut+`<div class="duo">${ch.responsable}${ch.echeance}</div>`+ch.theme+ch.detail
+    :Object.values(ch).join("");
+  if(col==="lieux"&&id){const ph=S.mur.filter(m=>m.lieu===id&&m.photo);corps+=`<div class="champ"><span class="l">Photos de ce lieu · ${ph.length}</span>${ph.length?`<div class="galerie">${ph.map(m=>`<img src="${esc(photoUrl(m.photo))}" alt="${esc(m.texte||"Photo")}" title="${esc(m.texte||"")}">`).join("")}</div>`:`<span class="qui">Associe des photos à ce lieu depuis le Mur (champ « Lieu associé »).</span>`}</div>`}
+  if(col==="traces"&&o.debut)corps+=`<span class="qui">Enregistré du ${esc(quand(Date.parse(o.debut)))} au ${esc(quand(Date.parse(o.fin)))} · ${(o.pts||[]).length/2} points</span>`;
+  const titre=col==="membres"?(monPseudo()?"Changer d'identifiant":"Qui es-tu ?"):`${id||col==="consignes"&&o.texte?"Modifier":"Nouveau"} · ${f.nom.toLowerCase()}`;
+  const aide=col==="membres"?`<p class="qui" style="margin:0">Ton identifiant s'affiche sur tout ce que tu ajoutes ou modifies. Utilise le prénom que le groupe connaît : c'est aussi lui qu'on écrit dans « Qui » et « Responsable ».</p>`:"";
+  $("#formulaire").innerHTML=`<h3>${titre}</h3>${aide}${corps}
+    ${o.par&&col!=="membres"?`<span class="qui">Dernière modification par ${auteur(o)} · ${esc(quand(o.maj))}</span>`:""}
+    <div class="actions">${id&&!["consignes","membres"].includes(col)?`<button type="button" class="btn rouge" id="suppr">Supprimer</button>`:""}
+    <span class="g">${col==="membres"&&!monPseudo()?"":`<button type="button" class="btn" id="annuler">Annuler</button>`}<button class="btn jaune" id="ok">Enregistrer</button></span></div>`;
+  $("#dlg").showModal();nommer($("#formulaire"));
+  const fi=$("#f_photo");if(fi)fi.addEventListener("change",async()=>{const a=$("#apercu"),x=fi.files[0];if(!x)return;a.src=URL.createObjectURL(x);a.hidden=false;
+    const ex=await lireExif(x);edit.exif=ex;$("#exifInfo").textContent=ex&&ex.lat!=null?`Position trouvée${ex.cap!=null?`, prise vers ${cap8(ex.cap)} (${ex.cap}°)`:""} : elle apparaîtra sur la carte.`:"Pas de position dans cette photo : associe-la à un lieu pour la situer."});
+}
+async function reduire(file){
+  try{const b=await createImageBitmap(file),k=Math.min(1,1600/Math.max(b.width,b.height)),c=document.createElement("canvas");
+    c.width=Math.round(b.width*k);c.height=Math.round(b.height*k);c.getContext("2d").drawImage(b,0,0,c.width,c.height);
+    const r=await new Promise(res=>c.toBlob(res,"image/jpeg",.85));return r||file}catch(e){return file}
+}
+function refus(e){
+  const c=e&&e.code;
+  if(c==="invalid_argument"){S.ecrire=false;info();render();toast("Modification refusée : demande au propriétaire de te passer « Éditeur ».")}
+  else if(c==="quota_exceeded"||c==="quota_or_state")toast("Le stockage est plein : supprime d'anciennes notes ou photos.");
+  else if(c==="too_large")toast("Fichier trop lourd.");
+  else if(c==="unsupported_type")toast("Format d'image non accepté : utilise JPEG ou PNG.");
+  else toast("Échec de l'enregistrement, réessaie dans un instant.");
+}
+$("#formulaire").addEventListener("submit",async ev=>{
+  ev.preventDefault();if(!edit)return;
+  if(!db){toast("Connecte-toi à claude.ai pour modifier.");return}
+  const {col,id,o}=edit,d={};
+  for(const [k,,type] of FORMS[col].champs){
+    if(type==="photo")continue;
+    if(type==="choix"){const r=document.querySelector(`input[name="f_${k}"]:checked`);if(r)d[k]=r.value;continue}
+    const e=$("#f_"+k);if(e)d[k]=type==="checkbox"?e.checked:e.value.trim();
+  }
+  if(col==="membres"&&S.membres.some(m=>m.id!==S.moi&&String(m.pseudo).toLowerCase()===d.pseudo.toLowerCase())){toast("Cet identifiant est déjà pris : ajoute une initiale.");return}
+  const ok=$("#ok"),fin=()=>{ok.disabled=false;ok.textContent="Enregistrer"};
+  ok.disabled=true;ok.textContent="Enregistrement…";
+  try{
+    const fi=$("#f_photo"),fichier=fi&&fi.files[0];
+    if(col==="mur"&&!d.texte&&!fichier&&!o.photo){toast("Ajoute une description ou une photo.");fin();return}
+    if(fichier){const blob=await reduire(fichier);const r=await assets.upload(blob,{type:blob.type==="image/jpeg"?"image/jpeg":(fichier.type||"image/jpeg")});d.photo=r.id;
+      const ex=edit.exif;delete o.lat;delete o.lon;delete o.cap;delete o.prise;if(ex)Object.assign(d,ex)}
+    const prev={...o};delete prev.id;
+    if(col==="questions"&&!id)prev.ordre=Math.max(0,...S.questions.map(q=>q.ordre||0))+1;
+    const now=Date.now();
+    const ref=col==="consignes"?db.doc("consignes/texte"):col==="membres"?db.doc("membres/"+S.moi):id?db.collection(col).doc(id):db.collection(col).doc();
+    await ref.set({...prev,...d,par:S.moi,maj:now,auteur:prev.auteur??S.moi,cree:prev.cree??now});
+    if(fichier&&o.photo&&assets)assets.delete(o.photo).catch(()=>{});
+    if(col==="creneaux"&&d.date){S.jour=d.date;S.semaine=Math.round((parse(lundiDe(d.date))-parse(lundiDe(auj())))/6048e5)}
+    $("#dlg").close();toast(col==="membres"?`Bienvenue, ${d.pseudo} !`:"Enregistré");render();
+  }catch(e){refus(e);fin()}
+});
+$("#formulaire").addEventListener("click",async ev=>{
+  const b=ev.target.closest("button");if(!b)return;
+  if(b.id==="annuler")$("#dlg").close();
+  if(b.id==="suppr"){
+    if(!edit.suppr){edit.suppr=true;b.textContent="Confirmer la suppression";return}
+    try{await db.collection(edit.col).doc(edit.id).delete();
+      if(edit.o.photo&&assets)assets.delete(edit.o.photo).catch(()=>{});
+      $("#dlg").close();toast("Supprimé")}catch(e){refus(e)}
+  }
+});
+$("#dlg").addEventListener("click",ev=>{if(ev.target===$("#dlg")&&!(edit&&edit.col==="membres"&&!monPseudo()))$("#dlg").close()});
+$("#dlg").addEventListener("cancel",ev=>{if(edit&&edit.col==="membres"&&!monPseudo())ev.preventDefault()});
+
+/* ---------- questionnaire ---------- */
+async function ajouterQuestion(){
+  const t=$("#qtexte"),texte=t.value.trim(),type=(document.querySelector('input[name="qtype"]:checked')||{}).value||"fermee";
+  if(!texte){toast("Écris d'abord la question.");t.focus();return}
+  try{await db.collection("questions").doc().set({texte,type,ordre:Math.max(0,...S.questions.map(q=>q.ordre||0))+1,par:S.moi,auteur:S.moi,cree:Date.now(),maj:Date.now()});
+    t.value="";t.focus();toast("Question ajoutée au questionnaire")}catch(e){refus(e)}
+}
+async function deplacerQuestion(id,sens){
+  const qs=[...S.questions].sort((a,b)=>(a.ordre||0)-(b.ordre||0)),i=qs.findIndex(q=>q.id===id),j=i+sens;if(j<0||j>=qs.length)return;
+  try{await db.collection("questions").doc(qs[i].id).update({ordre:j+1});await db.collection("questions").doc(qs[j].id).update({ordre:i+1});
+    for(let k=0;k<qs.length;k++)if(k!==i&&k!==j&&qs[k].ordre!==k+1)await db.collection("questions").doc(qs[k].id).update({ordre:k+1})}catch(e){refus(e)}
+}
+document.addEventListener("submit",async ev=>{
+  if(ev.target.id!=="fiche")return;ev.preventDefault();
+  if(!db){toast("Connecte-toi à claude.ai pour enregistrer.");return}
+  const rep={};let n=0;
+  for(const q of S.questions){
+    let v="",autre="";
+    if(q.type==="ouverte")v=($("#r_"+q.id)||{}).value||"";
+    else{const r=document.querySelector(`input[name="r_${q.id}"]:checked`);v=r?r.value:"";autre=($("#ra_"+q.id)||{}).value||""}
+    v=v.trim();autre=autre.trim();if(v||autre){rep[q.id]={q:q.texte,v,autre};n++}
+  }
+  if(!n){toast("Aucune réponse saisie.");return}
+  const b=ev.target.querySelector("button");b.disabled=true;
+  try{await db.collection("reponses").doc().set({rep,lieu:$("#r_lieu").value.trim(),profil:$("#r_profil").value.trim(),par:S.moi,quand:Date.now()});
+    ev.target.reset();toast(`Fiche n° ${S.reponses.length+1} enregistrée`);scrollTo(0,0)}catch(e){refus(e)}
+  b.disabled=false;
+});
+
+/* ---------- navigation ---------- */
+document.addEventListener("click",async ev=>{
+  const t=ev.target.closest("[data-vue],[data-ouvrir],[data-statut],[data-sem],[data-jour],[data-type],[data-vstatut],[data-theme],[data-moiseul],[data-outil],[data-nuance],[data-calque],[data-zoom],[data-annuler-trait],[data-qmode],[data-qajout],[data-qmonte],[data-qdescend],[data-supprep],[data-copier],#fab,#moiBtn");
+  if(!t||t.closest("dialog"))return;
+  const d=t.dataset;
+  if(t.id==="moiBtn"){ouvrir("membres",S.moi,{});return}
+  if(t.id==="fab"){S.vue==="consignes"?ouvrir("consignes","texte",{}):ouvrir({auj:"creneaux",semaine:"creneaux",taches:"taches",mur:"mur"}[S.vue],null,{});return}
+  if(d.vue){S.vue=d.vue;try{localStorage.setItem("vue",S.vue)}catch(e){}render();scrollTo(0,0);return}
+  if(d.sem!==undefined){S.semaine=d.sem==="0"?0:S.semaine+Number(d.sem);S.jour=null;render();return}
+  if(d.jour){S.jour=d.jour;render();return}
+  if(d.type!==undefined){S.type=d.type;render();return}
+  if(d.vstatut){S.statut=d.vstatut;render();return}
+  if(d.theme!==undefined){S.theme=d.theme;render();return}
+  if(d.moiseul!==undefined){S.moiSeul=d.moiseul==="1";render();return}
+  if(d.outil){S.outil=d.outil;majCarte();return}
+  if(d.nuance){S.couleur=d.nuance;majCarte();return}
+  if(d.calque){S.calques[d.calque]=!S.calques[d.calque];majCarte();return}
+  if(d.zoom!==undefined){if(d.zoom==="0")centrer();else{const r=zone();zoomA(+d.zoom,r.width/2,r.height/2)}return}
+  if(d.annulerTrait){const m=S.traits.filter(x=>x.par===S.moi).sort((a,b)=>(b.cree||0)-(a.cree||0))[0];if(m)supprimerTrait(m.id);else toast("Aucun trait à toi à annuler.");return}
+  if(d.qmode){S.qmode=d.qmode;render();return}
+  if(d.qajout){ajouterQuestion();return}
+  if(d.qmonte){deplacerQuestion(d.qmonte,-1);return}
+  if(d.qdescend){deplacerQuestion(d.qdescend,1);return}
+  if(d.supprep){if(t.dataset.ok!=="1"){t.dataset.ok="1";t.textContent="Confirmer";return}try{await db.collection("reponses").doc(d.supprep).delete();toast("Fiche supprimée")}catch(e){refus(e)}return}
+  if(d.copier){try{await navigator.clipboard.writeText(d.copier);toast("Lien copié")}catch(e){const c=t.previousElementSibling;const r=document.createRange();r.selectNodeContents(c);getSelection().removeAllRanges();getSelection().addRange(r);toast("Lien sélectionné : copie-le")}return}
+  if(d.statut){
+    if(!db){toast("Connecte-toi à claude.ai pour modifier.");return}
+    try{await db.collection("taches").doc(d.id).update({statut:d.statut,par:S.moi,maj:Date.now()});toast(`Tâche : ${STATUTS[d.statut].toLowerCase()}`)}catch(e){refus(e)}return}
+  if(d.ouvrir)ouvrir(d.ouvrir,d.id,d.date?{date:d.date}:{});
+});
+document.addEventListener("change",e=>{if(e.target.id==="gpx"&&e.target.files.length){if(!db)return toast("Connecte-toi à claude.ai pour importer.");importerGpx([...e.target.files]);e.target.value=""}});
+document.addEventListener("keydown",e=>{if(e.target.id==="qtexte"&&e.key==="Enter"&&(e.ctrlKey||e.metaKey)){e.preventDefault();ajouterQuestion()}});
+$("#filtre").addEventListener("input",e=>{S.filtre=e.target.value.trim().toLowerCase();render()});
+addEventListener("resize",()=>{if($("#carte"))placer()});
+addEventListener("hashchange",()=>{S.seulQ=location.hash==="#questionnaire";if(!S.seulQ&&S.vue==="questionnaire")S.vue="auj";render()});
+setInterval(()=>{if(!$("#dlg").open&&(S.vue==="auj"||S.vue==="semaine"))render()},60000);
+
+function info(){
+  const e=$("#info");
+  if(!db){e.hidden=false;e.textContent="Pour voir et modifier le planning du groupe, ouvre cette page connecté à ton compte claude.ai (le propriétaire doit te l'avoir partagée).";return}
+  if(!S.ecrire){e.hidden=false;e.textContent="Tu peux consulter mais pas modifier : demande au propriétaire de la page de te mettre « Éditeur » dans le partage.";return}
+  e.hidden=true;
+}
+/* thème clair / sombre : le choix est gardé sur l'appareil */
+const sombre=()=>{const t=document.documentElement.dataset.theme;return t?t==="dark":matchMedia("(prefers-color-scheme: dark)").matches};
+function majTheme(){const s=sombre(),b=$("#themeBtn");b.querySelector("use").setAttribute("href",s?"#i-auj":"#i-lune");b.setAttribute("aria-label",s?"Passer en thème clair":"Passer en thème sombre")}
+try{const t=localStorage.getItem("theme");if(t)document.documentElement.dataset.theme=t}catch(e){}
+majTheme();
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change",majTheme);
+$("#themeBtn").addEventListener("click",()=>{const t=sombre()?"light":"dark";document.documentElement.dataset.theme=t;try{localStorage.setItem("theme",t)}catch(e){}majTheme()});
+function etat(ok,t){const e=$("#etat");e.classList.toggle("ok",ok);e.querySelector("span").textContent=t}
+</script>
+<script src="sb.js"></script>
+</body></html>
