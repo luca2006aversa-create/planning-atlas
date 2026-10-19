@@ -2,6 +2,13 @@
 <html lang="fr"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#17302a">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icone-192.png">
+<link rel="apple-touch-icon" href="icone-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Atlas">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <title>Planning Workshop Atlas</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -211,6 +218,9 @@ dialog h3{font:700 1.5rem/1 var(--display);text-transform:uppercase;margin:0}
 .moi{border:1px solid rgba(255,255,255,.25);background:transparent;color:var(--on-deep);border-radius:999px;padding:5px 11px;font-weight:700;font-size:.82rem;display:inline-flex;gap:7px;align-items:center;white-space:nowrap}
 .moi i{width:10px;height:10px;border-radius:50%;background:var(--jaune)}
 .mob{display:none!important}
+.marque b{white-space:nowrap}
+.moi span{max-width:12ch;overflow:hidden;text-overflow:ellipsis}
+@media (max-width:899px){.marque small{display:none}.moi span{max-width:7ch}.entete{gap:8px}}
 @media (max-width:899px){.mob{display:inline-flex!important}.entete .etat span{display:none}}
 
 /* carte */
@@ -237,7 +247,10 @@ dialog h3{font:700 1.5rem/1 var(--display);text-transform:uppercase;margin:0}
 .pin.photo{width:44px;height:44px;margin:-22px 0 0 -22px}
 .pin.photo .cone{position:absolute;inset:0;border-radius:50%;background:conic-gradient(from -30deg,rgba(242,183,5,.8) 0 60deg,transparent 60deg)}
 .pin.photo b{position:absolute;left:14px;top:14px;width:16px;height:16px;border-radius:50%;background:#17302a;border:3px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.35)}
-.zoom{position:absolute;right:10px;top:10px;display:grid;gap:6px;z-index:2}
+.zoom{position:absolute;right:10px;top:10px;display:grid;gap:6px;z-index:1000}
+.pin-l{background:none;border:0}
+.leaflet-container{font:inherit;background:var(--sunk)}
+.carte-zone.dessin{cursor:crosshair}
 .zoom .btn{box-shadow:0 1px 4px rgba(0,0,0,.2)}
 .galerie{display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:6px}
 .galerie img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;background:var(--sunk)}
@@ -297,6 +310,7 @@ body{margin:0}img{max-width:100%}[hidden]{display:none!important}
     <div class="marque"><b>Planning <span>Atlas</span></b><small>Workshop S5 · Hanoï</small></div>
     <div class="onglets" id="ongletsHaut"></div>
     <button class="moi mob" data-vue="consignes" aria-label="Consignes"><svg width="16" height="16"><use href="#i-con"/></svg></button>
+    <button class="moi" id="installer" hidden>Installer l'appli</button>
     <button class="moi" id="themeBtn" aria-label="Passer en thème sombre" title="Clair / sombre"><svg width="16" height="16"><use href="#i-lune"/></svg></button>
     <button class="moi" id="moiBtn" hidden><i></i><span></span></button>
     <div class="etat" id="etat"><i></i><span>Connexion…</span></div>
@@ -325,6 +339,7 @@ body{margin:0}img{max-width:100%}[hidden]{display:none!important}
   <button class="btn jaune">Entrer</button>
 </form></dialog>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="config.js"></script>
 <script>
 const TYPES={terrain:"Terrain",atelier:"Atelier",rendu:"Rendu",reunion:"Réunion",autre:"Autre"};
@@ -336,10 +351,6 @@ const QTYPES={fermee:"Fermée : oui / non / autre",ouverte:"Ouverte : réponse �
 const COULEURS=["#c43d2b","#f2b705","#2f7a4f","#2d6a9f","#7b4fa6","#17302a"];
 const LIEN_Q=location.origin+location.pathname+"#questionnaire";
 /* fond de carte : rendu OSM de SiteScope, projection équirectangulaire (comme presentations/moteur/carte.js) */
-const CARTE={src:"fond-carte.jpg",W:3600,H:2446,bbox:[105.818,21.028,105.900,21.080]};
-CARTE.kx=Math.cos((CARTE.bbox[1]+CARTE.bbox[3])/2*Math.PI/180);CARTE.ech=CARTE.W/((CARTE.bbox[2]-CARTE.bbox[0])*CARTE.kx);
-const versPx=(lon,lat)=>[(lon-CARTE.bbox[0])*CARTE.kx*CARTE.ech,(CARTE.bbox[3]-lat)*CARTE.ech];
-const versGeo=(x,y)=>[CARTE.bbox[0]+x/(CARTE.kx*CARTE.ech),CARTE.bbox[3]-y/CARTE.ech];
 
 const FORMS={
   creneaux:{nom:"Créneau",champs:[
@@ -490,11 +501,10 @@ const VUES={
     ${m.length?`<div class="mur">${m.map(post).join("")}</div>`:vide("Aucune note pour l'instant. Ajoute une observation, un croquis ou une photo.","mur","Ajouter une note")}`;
   },
   carte(){
-    return `<div class="tete"><h1>Carte<small>Bãi Giữa et ses rives · fond OpenStreetMap (SiteScope)</small></h1></div>
+    return `<div class="tete"><h1>Carte<small>Plan, satellite ou fond SiteScope : choix en bas à gauche</small></h1></div>
     <div class="barre-carte" id="barreCarte"></div>
     <div class="carte-zone" id="carte">
-      <div id="plan" style="width:${CARTE.W}px;height:${CARTE.H}px"><img src="${CARTE.src}" width="${CARTE.W}" height="${CARTE.H}" alt="Fond de carte : bâti, rues et eau autour de Bãi Giữa" draggable="false"><svg id="svgc" width="${CARTE.W}" height="${CARTE.H}" viewBox="0 0 ${CARTE.W} ${CARTE.H}"></svg></div>
-      <div id="marques"></div>
+      
       <div class="zoom"><button class="btn ico" data-zoom="1.5" aria-label="Zoomer">${ic("i-plus")}</button><button class="btn ico" data-zoom="0.66" aria-label="Dézoomer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14"/></svg></button><button class="btn ico" data-zoom="0" aria-label="Recentrer sur le banc">${ic("i-lieu")}</button></div>
     </div>
     <p class="qui">« Enregistrer mon trajet » suit ta position pendant la marche : garde la page ouverte, écran allumé. On peut aussi importer un fichier GPX. Les photos se placent seules sur la carte.</p>`;
@@ -561,69 +571,74 @@ function render(){
   const g=sauver(v);v.innerHTML=VUES[S.vue]();restaurer(v,g);nommer(v);
 }
 
-/* ---------- carte : déplacer, zoomer, dessiner, lieux, photos, trajets ---------- */
-let cam=null;const ptrs=new Map();let geste=null,trait=null;
-function zone(){return $("#carte").getBoundingClientRect()}
-function appliquer(){$("#plan").style.transform=`translate(${cam.x}px,${cam.y}px) scale(${cam.k})`;placer()}
-function centrer(){const z=zone(),k=Math.min(Math.max(z.width/1500,z.height/1300),1);const [x,y]=versPx(105.857,21.053);cam={x:z.width/2-x*k,y:z.height/2-y*k,k};appliquer()}
-function zoomA(f,sx,sy){const z=zone(),kmin=Math.min(z.width/CARTE.W,z.height/CARTE.H)*.8,nk=Math.min(4,Math.max(kmin,cam.k*f));
-  cam.x=sx-(sx-cam.x)*nk/cam.k;cam.y=sy-(sy-cam.y)*nk/cam.k;cam.k=nk;appliquer()}
-const ecranVersImg=(cx,cy)=>{const z=zone();return [(cx-z.left-cam.x)/cam.k,(cy-z.top-cam.y)/cam.k]};
-function placer(){for(const e of document.querySelectorAll("#marques .pin"))e.style.transform=`translate(${cam.x+e.dataset.x*cam.k}px,${cam.y+e.dataset.y*cam.k}px)`}
+/* ---------- carte mondiale (Leaflet + OpenStreetMap) : dessiner, lieux, photos, trajets ---------- */
+let carte=null,couches={},traitEnCours=null,ligneEnCours=null;
+const VUE_DEPART=[21.053,105.857];
+const FONDS={
+  "Plan":()=>L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OpenStreetMap"}),
+  "Relief":()=>L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",{subdomains:"abc",maxZoom:17,attribution:"© OpenStreetMap, © OpenTopoMap (CC-BY-SA)"}),
+  "Satellite":()=>L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",{maxZoom:19,attribution:"Imagerie © Esri"})
+};
+const FOND_SITESCOPE={src:"fond-carte.jpg",bornes:[[21.028,105.818],[21.080,105.900]]};
+const icone=(html)=>L.divIcon({className:"pin-l",html,iconSize:[0,0]});
 function barreCarte(){
   const o=(k,l)=>`<button data-outil="${k}" aria-pressed="${S.outil===k}">${l}</button>`;
   return `<div class="seg" role="group" aria-label="Outil">${o("main","Déplacer")}${S.ecrire?o("dessin","Dessiner")+o("gomme","Gomme")+o("lieu","+ Lieu"):""}</div>
     ${S.outil==="dessin"?`<div class="g" role="group" aria-label="Couleur">${COULEURS.map(c=>`<button class="nuance" style="--c:${c}" data-nuance="${c}" aria-pressed="${S.couleur===c}" aria-label="Couleur ${c}"></button>`).join("")}<button class="btn" data-annuler-trait="1">Annuler mon dernier trait</button></div>`:""}
-    ${gpsBoutons()}${S.ecrire?`<span class="btn fichier">Importer un trajet GPX<input type="file" id="gpx" accept=".gpx,application/gpx+xml" multiple aria-label="Importer un trajet GPX"></span>`:""}
+    ${typeof gpsBoutons==="function"?gpsBoutons():""}${S.ecrire?`<span class="btn fichier">Importer un trajet GPX<input type="file" id="gpx" accept=".gpx,application/gpx+xml" multiple aria-label="Importer un trajet GPX"></span>`:""}
     <div class="puces" role="group" aria-label="Calques">${[["traits","Dessins"],["traces","Trajets"],["photos","Photos"],["lieux","Lieux"]].map(([k,l])=>`<button data-calque="${k}" aria-pressed="${S.calques[k]}">${l}</button>`).join("")}</div>`;
 }
-const chemin=pts=>{let d="";for(let i=0;i<pts.length;i+=2){const [x,y]=versPx(pts[i],pts[i+1]);d+=(i?"L":"M")+x.toFixed(1)+","+y.toFixed(1)}return d};
+const ll=pts=>{const r=[];for(let i=0;i<pts.length;i+=2)r.push([pts[i+1],pts[i]]);return r};
 function majCarte(){
+  if(!carte)return;
   $("#barreCarte").innerHTML=barreCarte();
-  const z=$("#carte");z.className="carte-zone "+S.outil;
-  let h="";
-  if(S.calques.traces)for(const t of S.traces){const d=chemin(t.pts||[]);h+=`<path d="${d}" fill="none" stroke="${couleurDe(t.par)}" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity=".85" vector-effect="non-scaling-stroke"/><path class="hit tr" data-ouvrir="traces" data-id="${esc(t.id)}" d="${d}" fill="none" stroke="transparent" stroke-width="16" vector-effect="non-scaling-stroke"/>`}
-  if(S.calques.traits)for(const t of S.traits){const d=chemin(t.pts||[]);h+=`<path d="${d}" fill="none" stroke="${esc(t.couleur||COULEURS[0])}" stroke-width="${+t.ep||3}" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/><path class="hit de" data-trait="${esc(t.id)}" d="${d}" fill="none" stroke="transparent" stroke-width="18" vector-effect="non-scaling-stroke"/>`}
-  h+=`<path id="encours" fill="none" stroke="${S.couleur}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;
-  $("#svgc").innerHTML=h;
-  let m="";
-  if(S.calques.photos)for(const p of S.mur.filter(x=>x.lat!=null&&x.lon!=null)){const [x,y]=versPx(p.lon,p.lat);
-    m+=`<button class="pin photo" data-x="${x}" data-y="${y}" data-ouvrir="mur" data-id="${esc(p.id)}" aria-label="Photo : ${esc(p.texte||"sans description")}">${p.cap!=null?`<span class="cone" style="transform:rotate(${+p.cap}deg)"></span>`:""}<b></b></button>`}
-  if(S.calques.lieux)for(const l of S.lieux){const [x,y]=versPx(l.lon,l.lat);m+=`<button class="pin lieu" data-x="${x}" data-y="${y}" data-ouvrir="lieux" data-id="${esc(l.id)}"><i></i><span>${esc(l.nom)}</span></button>`}
-  m+=maPosMarque();$("#marques").innerHTML=m;placer();
+  $("#carte").classList.remove("main","dessin","gomme","lieu");$("#carte").classList.add(S.outil);
+  if(S.outil==="dessin")carte.dragging.disable();else carte.dragging.enable();
+  for(const g of Object.values(couches))g.clearLayers();
+  if(S.calques.traces)for(const t of S.traces)L.polyline(ll(t.pts||[]),{color:couleurDe(t.par),weight:5,opacity:.85}).on("click",()=>{if(S.outil==="main")ouvrir("traces",t.id)}).addTo(couches.traces);
+  if(S.calques.traits)for(const t of S.traits)L.polyline(ll(t.pts||[]),{color:t.couleur||COULEURS[0],weight:+t.ep||3}).on("click",()=>{if(S.outil==="gomme")supprimerTrait(t.id)}).addTo(couches.traits);
+  if(S.calques.photos)for(const p of S.mur.filter(x=>x.lat!=null&&x.lon!=null))
+    L.marker([p.lat,p.lon],{icon:icone(`<span class="pin photo" title="${esc(p.texte||"Photo")}">${p.cap!=null?`<span class="cone" style="transform:rotate(${+p.cap}deg)"></span>`:""}<b></b></span>`)}).on("click",()=>ouvrir("mur",p.id)).addTo(couches.photos);
+  if(S.calques.lieux)for(const l of S.lieux)if(l.lat!=null)
+    L.marker([l.lat,l.lon],{icon:icone(`<span class="pin lieu"><i></i><span>${esc(l.nom)}</span></span>`)}).on("click",()=>ouvrir("lieux",l.id)).addTo(couches.lieux);
+  if(typeof maPos!=="undefined"&&maPos)L.circleMarker([maPos.lat,maPos.lon],{radius:9,color:"#fff",weight:3,fillColor:"#2d6a9f",fillOpacity:1}).addTo(couches.moi);
+}
+function centrer(){
+  const pts=[...S.lieux.filter(l=>l.lat!=null).map(l=>[l.lat,l.lon]),...S.mur.filter(m=>m.lat!=null).map(m=>[m.lat,m.lon])];
+  if(pts.length>1)carte.fitBounds(pts,{padding:[40,40],maxZoom:16});else carte.setView(pts[0]||VUE_DEPART,pts.length?16:14);
 }
 function initCarte(){
-  const z=$("#carte");if(cam)appliquer();else centrer();
-  z.addEventListener("wheel",e=>{e.preventDefault();const r=zone();zoomA(e.deltaY<0?1.2:1/1.2,e.clientX-r.left,e.clientY-r.top)},{passive:false});
+  if(carte){carte.remove();carte=null}
+  carte=L.map("carte",{zoomControl:false,tap:false});
+  const fonds={};for(const [n,f] of Object.entries(FONDS))fonds[n]=f();
+  let choix="Plan";try{choix=localStorage.getItem("fond")||"Plan"}catch(e){}
+  (fonds[choix]||fonds.Plan).addTo(carte);
+  const sitescope=L.imageOverlay(FOND_SITESCOPE.src,FOND_SITESCOPE.bornes,{opacity:.9});
+  L.control.layers(fonds,{"Fond SiteScope (Bãi Giữa)":sitescope},{position:"bottomleft"}).addTo(carte);
+  carte.on("baselayerchange",e=>{try{localStorage.setItem("fond",e.name)}catch(x){}});
+  for(const k of ["traces","traits","photos","lieux","moi"])couches[k]=L.layerGroup().addTo(carte);
+  carte.setView(VUE_DEPART,14);
+  carte.on("click",e=>{if(S.outil==="lieu")ouvrir("lieux",null,{lat:+e.latlng.lat.toFixed(6),lon:+e.latlng.lng.toFixed(6)})});
+  const z=$("#carte"),pointeurs=new Set();L.DomEvent.disableClickPropagation(z.querySelector(".zoom"));
   z.addEventListener("pointerdown",e=>{
-    if(e.target.closest(".pin,.zoom"))return;
-    if(S.outil==="gomme"){const t=e.target.closest("[data-trait]");if(t)supprimerTrait(t.dataset.trait);}
-    z.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
-    if(ptrs.size===2){trait=null;$("#encours").setAttribute("d","");const [a,b]=[...ptrs.values()];geste={type:"pinch",d:Math.hypot(a.x-b.x,a.y-b.y),mx:(a.x+b.x)/2,my:(a.y+b.y)/2};return}
-    if(S.outil==="dessin"){trait=[ecranVersImg(e.clientX,e.clientY)];geste=null;return}
-    geste={type:"pan",x0:e.clientX,y0:e.clientY,cx:cam.x,cy:cam.y,bouge:0};
+    pointeurs.add(e.pointerId);
+    if(S.outil!=="dessin"||e.target.closest(".leaflet-control,.zoom"))return;
+    if(pointeurs.size>1){traitEnCours=null;if(ligneEnCours){ligneEnCours.remove();ligneEnCours=null}return}
+    traitEnCours=[carte.mouseEventToLatLng(e)];ligneEnCours=L.polyline(traitEnCours,{color:S.couleur,weight:3}).addTo(carte);
+    z.setPointerCapture(e.pointerId);
   });
   z.addEventListener("pointermove",e=>{
-    if(!ptrs.has(e.pointerId))return;ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
-    if(geste&&geste.type==="pinch"&&ptrs.size===2){const [a,b]=[...ptrs.values()],d=Math.hypot(a.x-b.x,a.y-b.y),mx=(a.x+b.x)/2,my=(a.y+b.y)/2,r=zone();
-      cam.x+=mx-geste.mx;cam.y+=my-geste.my;zoomA(d/geste.d,mx-r.left,my-r.top);Object.assign(geste,{d,mx,my});return}
-    if(trait){const p=ecranVersImg(e.clientX,e.clientY),q=trait[trait.length-1];if(Math.hypot(p[0]-q[0],p[1]-q[1])*cam.k>2){trait.push(p);$("#encours").setAttribute("d","M"+trait.map(t=>t[0].toFixed(1)+","+t[1].toFixed(1)).join("L"))}return}
-    if(geste&&geste.type==="pan"){geste.bouge=Math.max(geste.bouge,Math.hypot(e.clientX-geste.x0,e.clientY-geste.y0));cam.x=geste.cx+e.clientX-geste.x0;cam.y=geste.cy+e.clientY-geste.y0;appliquer()}
+    if(!traitEnCours)return;const p=carte.mouseEventToLatLng(e),q=traitEnCours[traitEnCours.length-1];
+    if(carte.latLngToContainerPoint(p).distanceTo(carte.latLngToContainerPoint(q))>2){traitEnCours.push(p);ligneEnCours.setLatLngs(traitEnCours)}
   });
-  const fin=e=>{
-    if(!ptrs.has(e.pointerId))return;ptrs.delete(e.pointerId);
-    if(trait&&ptrs.size===0){const t=trait;trait=null;if(t.length>1)enregistrerTrait(t);else $("#encours").setAttribute("d","")}
-    if(geste&&geste.type==="pan"&&geste.bouge<6&&S.outil==="lieu"&&e.type==="pointerup"){const [x,y]=ecranVersImg(e.clientX,e.clientY),[lon,lat]=versGeo(x,y);ouvrir("lieux",null,{lon:+lon.toFixed(6),lat:+lat.toFixed(6)})}
-    if(ptrs.size<2&&geste&&geste.type==="pinch"){geste=null;if(ptrs.size===1){const [p]=[...ptrs.values()];geste={type:"pan",x0:p.x,y0:p.y,cx:cam.x,cy:cam.y,bouge:99}}}
-    else if(ptrs.size===0)geste=null;
-  };
+  const fin=e=>{pointeurs.delete(e.pointerId);if(!traitEnCours)return;const t=traitEnCours;traitEnCours=null;if(t.length>1)enregistrerTrait(t);if(ligneEnCours){ligneEnCours.remove();ligneEnCours=null}};
   z.addEventListener("pointerup",fin);z.addEventListener("pointercancel",fin);
+  setTimeout(()=>carte.invalidateSize(),50);
 }
 async function enregistrerTrait(t){
-  if(!db){toast("Connecte-toi à claude.ai pour dessiner.");return}
-  const pts=[];for(const [x,y] of t){const [lon,lat]=versGeo(x,y);pts.push(+lon.toFixed(6),+lat.toFixed(6))}
+  if(!db){toast("Connecte-toi pour dessiner.");return}
+  const pts=[];for(const p of t)pts.push(+p.lng.toFixed(6),+p.lat.toFixed(6));
   try{await db.collection("traits").doc().set({pts,couleur:S.couleur,ep:3,par:S.moi,cree:Date.now()})}catch(e){refus(e)}
-  const p=$("#encours");if(p)p.setAttribute("d","");
 }
 async function supprimerTrait(id){try{await db.collection("traits").doc(id).delete();toast("Trait effacé")}catch(e){refus(e)}}
 async function importerGpx(files){
@@ -632,7 +647,7 @@ async function importerGpx(files){
       const x=new DOMParser().parseFromString(await f.text(),"application/xml");
       const brut=[...x.querySelectorAll("trkpt,rtept")].map(p=>[+p.getAttribute("lon"),+p.getAttribute("lat")]).filter(p=>isFinite(p[0])&&isFinite(p[1]));
       if(brut.length<2){toast(`${f.name} : aucun point de trajet trouvé.`);continue}
-      const gard=[brut[0]];for(const p of brut){const q=gard[gard.length-1];if(Math.hypot((p[0]-q[0])*111320*CARTE.kx,(p[1]-q[1])*110540)>4)gard.push(p)}
+      const gard=[brut[0]];for(const p of brut){const q=gard[gard.length-1];if(Math.hypot((p[0]-q[0])*111320*Math.cos(p[1]*Math.PI/180),(p[1]-q[1])*110540)>4)gard.push(p)}
       const pas=Math.ceil(gard.length/8000),pts=[];gard.forEach((p,i)=>{if(i%pas===0)pts.push(Math.round(p[0]*1e5)/1e5,Math.round(p[1]*1e5)/1e5)});
       const t=[...x.querySelectorAll("time")].map(e=>e.textContent);
       await db.collection("traces").doc().set({nom:f.name.replace(/\.gpx$/i,""),pts,debut:t[0]||null,fin:t[t.length-1]||null,par:S.moi,cree:Date.now()});
@@ -800,7 +815,7 @@ document.addEventListener("click",async ev=>{
   if(d.outil){S.outil=d.outil;majCarte();return}
   if(d.nuance){S.couleur=d.nuance;majCarte();return}
   if(d.calque){S.calques[d.calque]=!S.calques[d.calque];majCarte();return}
-  if(d.zoom!==undefined){if(d.zoom==="0")centrer();else{const r=zone();zoomA(+d.zoom,r.width/2,r.height/2)}return}
+  if(d.zoom!==undefined){if(!carte)return;if(d.zoom==="0")centrer();else carte.setZoom(carte.getZoom()+(+d.zoom>1?1:-1));return}
   if(d.annulerTrait){const m=S.traits.filter(x=>x.par===S.moi).sort((a,b)=>(b.cree||0)-(a.cree||0))[0];if(m)supprimerTrait(m.id);else toast("Aucun trait à toi à annuler.");return}
   if(d.qmode){S.qmode=d.qmode;render();return}
   if(d.qajout){ajouterQuestion();return}
@@ -816,7 +831,7 @@ document.addEventListener("click",async ev=>{
 document.addEventListener("change",e=>{if(e.target.id==="gpx"&&e.target.files.length){if(!db)return toast("Connecte-toi à claude.ai pour importer.");importerGpx([...e.target.files]);e.target.value=""}});
 document.addEventListener("keydown",e=>{if(e.target.id==="qtexte"&&e.key==="Enter"&&(e.ctrlKey||e.metaKey)){e.preventDefault();ajouterQuestion()}});
 $("#filtre").addEventListener("input",e=>{S.filtre=e.target.value.trim().toLowerCase();render()});
-addEventListener("resize",()=>{if($("#carte"))placer()});
+addEventListener("resize",()=>{if(carte&&$("#carte"))carte.invalidateSize()});
 addEventListener("hashchange",()=>{S.seulQ=location.hash==="#questionnaire";if(!S.seulQ&&S.vue==="questionnaire")S.vue="auj";render()});
 setInterval(()=>{if(!$("#dlg").open&&(S.vue==="auj"||S.vue==="semaine"))render()},60000);
 

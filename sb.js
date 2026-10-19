@@ -120,7 +120,7 @@ function demarrerTrajet() {
     maPos = { lon, lat, t: Date.now() };
     if (accuracy <= 40) {
       const q = trajet.pts, n = q.length;
-      if (!n || Math.hypot((lon - q[n - 2]) * 111320 * CARTE.kx, (lat - q[n - 1]) * 110540) > 5) q.push(+lon.toFixed(6), +lat.toFixed(6));
+      if (!n || Math.hypot((lon - q[n - 2]) * 111320 * Math.cos(lat * Math.PI / 180), (lat - q[n - 1]) * 110540) > 5) q.push(+lon.toFixed(6), +lat.toFixed(6));
       if (Date.now() - trajet.envoi > 20000) envoyerTrajet(false);
     }
     if ($("#carte")) majCarte();
@@ -146,7 +146,6 @@ async function arreterTrajet() {
 const gpsBoutons = () => S.ecrire ? (suivi != null
   ? `<button class="btn rouge" data-gps="stop">■ Arrêter le trajet · ${trajet ? trajet.pts.length / 2 : 0} pts</button>`
   : `<button class="btn jaune" data-gps="go">● Enregistrer mon trajet</button>`) + `<button class="btn" data-gps="ici">Où suis-je ?</button>` : "";
-const maPosMarque = () => { if (!maPos) return ""; const [x, y] = versPx(maPos.lon, maPos.lat); return `<span class="pin ici" data-x="${x}" data-y="${y}" title="Ta position"></span>`; };
 document.addEventListener("click", async (e) => {
   const b = e.target.closest("[data-gps]"); if (!b) return;
   if (b.dataset.gps === "go") demarrerTrajet();
@@ -154,10 +153,17 @@ document.addEventListener("click", async (e) => {
   else {
     const p = await positionActuelle(10000);
     if (!p) { toast("Position introuvable : autorise la localisation pour ce site."); return; }
-    const [x, y] = versPx(p.lon, p.lat), r = zone(); cam.k = Math.max(cam.k, 0.6); cam.x = r.width / 2 - x * cam.k; cam.y = r.height / 2 - y * cam.k; majCarte(); appliquer();
+    majCarte(); if (carte) carte.setView([p.lat, p.lon], Math.max(carte.getZoom(), 17));
   }
 });
 addEventListener("beforeunload", (e) => { if (suivi != null) { envoyerTrajet(false); e.preventDefault(); } });
+
+/* ---------- appli installable ---------- */
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+let invite = null;
+addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); invite = e; $("#installer").hidden = false; });
+$("#installer").addEventListener("click", async () => { if (!invite) return; invite.prompt(); await invite.userChoice; invite = null; $("#installer").hidden = true; });
+addEventListener("appinstalled", () => { $("#installer").hidden = true; toast("Appli installée"); });
 
 /* ---------- démarrage ---------- */
 (async () => {
