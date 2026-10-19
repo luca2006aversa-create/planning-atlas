@@ -28,6 +28,7 @@ async function charger() {
 const ref = (col, id) => ({
   id,
   async set(data) {
+    if (data.site === undefined && !["membres", "consignes", "sites"].includes(col)) data = { ...data, site: S.site };
     const { error } = await SB.from("docs").upsert({ col, id, data, maj: new Date().toISOString() });
     if (error) throw erreur(error);
     table(col).set(id, data); emettre(col);
@@ -91,7 +92,7 @@ function ecranEntree() {
       b.disabled = false;
       if (error) { $("#e_msg").textContent = "Erreur de connexion : " + error.message; return; }
       if (!data) { $("#e_msg").textContent = "Code du groupe incorrect."; $("#e_code").select(); return; }
-      d.close(); ok();
+      const site = (document.querySelector('input[name="e_site"]:checked') || {}).value || "hanoi"; S.site = site; try { localStorage.setItem("site", site); } catch (x) {} d.close(); ok();
     });
   });
 }
@@ -181,9 +182,10 @@ addEventListener("appinstalled", () => { $("#installer").hidden = true; toast("A
     const { data: adh } = await SB.from("adherents").select("uid").eq("uid", S.moi).maybeSingle();
     if (!adh) await ecranEntree();
     db = dbSB; user = userSB; assets = assetsSB; S.identite = true;
-    for (const col of COLS) db.collection(col).onSnapshot((s) => { S[col] = s.docs.map((d) => ({ id: d.id, ...d.data() })); render(); });
-    db.doc("consignes/texte").onSnapshot((s) => { S.consignes = s.exists ? s.data() : null; render(); });
+    for (const col of [...COLS, "consignes", "sites"]) db.collection(col).onSnapshot((s) => { R[col] = s.docs.map((d) => ({ id: d.id, ...d.data() })); appliquerSite(); render(); });
+    
     await charger();
+    { const m = (R.membres || []).find((x) => x.id === S.moi); if (m && m.site && SITES[m.site] && m.site !== S.site) { S.site = m.site; try { localStorage.setItem("site", m.site); } catch (x) {} } else if (m && !m.site) db.collection("membres").doc(S.moi).update({ site: S.site }).catch(() => {}); appliquerSite(); }
     SB.channel("docs").on("postgres_changes", { event: "*", schema: "public", table: "docs" }, (p) => {
       const r = p.eventType === "DELETE" ? p.old : p.new; if (!r || !r.col) return;
       if (p.eventType === "DELETE") table(r.col).delete(r.id); else table(r.col).set(r.id, r.data);

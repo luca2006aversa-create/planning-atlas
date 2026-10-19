@@ -218,9 +218,16 @@ dialog h3{font:700 1.5rem/1 var(--display);text-transform:uppercase;margin:0}
 /* identifiant */
 .moi{border:1px solid rgba(255,255,255,.25);background:transparent;color:var(--on-deep);border-radius:999px;padding:5px 11px;font-weight:700;font-size:.82rem;display:inline-flex;gap:7px;align-items:center;white-space:nowrap}
 .moi i{width:10px;height:10px;border-radius:50%;background:var(--jaune)}
+.sites{max-width:1240px;margin:0 auto;display:flex;gap:6px;padding-block:0 10px}
+.sites button{flex:1;border:1px solid rgba(255,255,255,.22);background:transparent;color:var(--on-deep-muted);border-radius:999px;padding:7px 12px;font-weight:700;font-size:.88rem;display:flex;gap:8px;align-items:center;justify-content:center;min-width:0}
+.sites button small{font-weight:500;opacity:.8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sites button[aria-pressed="true"]{background:var(--on-deep);color:var(--deep);border-color:var(--on-deep)}
+@media (min-width:900px){.sites{max-width:520px;margin:0 0 0 auto}}
+@media (max-width:599px){.sites button small{display:none}}
 .mob{display:none!important}
 .marque b{white-space:nowrap}
 .logo{width:34px;height:34px;border-radius:9px;flex:none}
+@media (max-width:440px){.marque{display:none}.logo{margin-right:auto}}
 .moi span{max-width:12ch;overflow:hidden;text-overflow:ellipsis}
 @media (max-width:899px){.marque small{display:none}.moi span{max-width:7ch}.entete{gap:8px}}
 @media (max-width:899px){.mob{display:inline-flex!important}.entete .etat span{display:none}}
@@ -309,7 +316,7 @@ body{margin:0}img{max-width:100%}[hidden]{display:none!important}
 
 <header class="pad">
   <div class="entete">
-    <img class="logo" src="icone.svg" alt="" width="34" height="34"><div class="marque"><b>Planning <span>Atlas</span></b><small>Workshop S5 · Hanoï</small></div>
+    <img class="logo" src="icone.svg" alt="" width="34" height="34"><div class="marque"><b>Planning <span>Atlas</span></b><small id="sousTitre">Workshop S5 · Hanoï</small></div>
     <div class="onglets" id="ongletsHaut"></div>
     <button class="moi mob" data-vue="consignes" aria-label="Consignes"><svg width="16" height="16"><use href="#i-con"/></svg></button>
     <button class="moi" id="installer" hidden>Installer l'appli</button>
@@ -317,6 +324,7 @@ body{margin:0}img{max-width:100%}[hidden]{display:none!important}
     <button class="moi" id="moiBtn" hidden><i></i><span></span></button>
     <div class="etat" id="etat"><i></i><span>Connexion…</span></div>
   </div>
+  <div class="sites" id="sites" role="group" aria-label="Site de workshop"></div>
 </header>
 <datalist id="pseudos"></datalist>
 <main class="pad">
@@ -337,6 +345,7 @@ body{margin:0}img{max-width:100%}[hidden]{display:none!important}
   <p class="qui" style="margin:0">Entre le code du groupe et ton prénom. Tu ne le feras qu'une fois sur cet appareil.</p>
   <div class="champ"><label for="e_code">Code du groupe</label><input id="e_code" type="password" autocomplete="off" required></div>
   <div class="champ"><label for="e_pseudo">Ton prénom ou identifiant</label><input id="e_pseudo" maxlength="30" autocomplete="nickname" required placeholder="ex. Luca"></div>
+  <div class="champ"><span class="l">Ton site de workshop</span><div class="choix"><label><input type="radio" name="e_site" value="hanoi" checked><span>Hanoï · BG1 à BG4</span></label><label><input type="radio" name="e_site" value="tasung"><span>Tà Sung · TS1 à TS5</span></label></div></div>
   <p id="e_msg" class="retard" style="margin:0"></p>
   <button class="btn jaune">Entrer</button>
 </form></dialog>
@@ -371,11 +380,37 @@ const FORMS={
   membres:{nom:"Identifiant",champs:[["pseudo","Ton prénom ou identifiant","text",1,null,"ex. Luca"]]},
   consignes:{nom:"Consignes communes",champs:[["texte","Consignes","textarea",0,null,"Nommage des fichiers, sources, légendes, éthique des entretiens…"]]}
 };
+const SITES={
+  hanoi:{nom:"Hanoï",lieu:"Bãi Giữa, fleuve Rouge",groupes:"BG1 à BG4",centre:[21.053,105.857],zoom:14},
+  tasung:{nom:"Tà Sung",lieu:"Khau Phạ, montagnes du nord",groupes:"TS1 à TS5",centre:[21.77,104.30],zoom:13}
+};
+const R={};
+const consId=()=>S.site==="hanoi"?"texte":S.site;
+const siteDe=d=>d.site||"hanoi";
+const reglageSite=()=>(R.sites||[]).find(d=>d.id===S.site)||{};
+const siteCentre=()=>{const r=reglageSite();return r.lat!=null?[r.lat,r.lon]:SITES[S.site].centre};
+const siteZoom=()=>reglageSite().zoom||SITES[S.site].zoom;
+function appliquerSite(){
+  for(const col of COLS)S[col]=col==="membres"?(R.membres||[]):(R[col]||[]).filter(d=>siteDe(d)===S.site);
+  S.consignes=(R.consignes||[]).find(d=>d.id===consId())||null;
+}
+function majSites(){
+  $("#sites").innerHTML=Object.entries(SITES).map(([k,v])=>`<button data-site="${k}" aria-pressed="${S.site===k}">${v.nom}<small>${v.groupes}</small></button>`).join("");
+  $("#sousTitre").textContent="Workshop S5 · "+SITES[S.site].lieu;
+}
+async function changerSite(k){
+  if(!SITES[k]||k===S.site)return;
+  S.site=k;S.jour=null;S.theme="";try{localStorage.setItem("site",k)}catch(e){}
+  appliquerSite();if(carte)carte.setView(siteCentre(),siteZoom());render();
+  if(db&&S.moi&&monPseudo())db.collection("membres").doc(S.moi).update({site:k}).catch(()=>{});
+}
+document.addEventListener("click",e=>{const b=e.target.closest("[data-site]");if(b)changerSite(b.dataset.site);
+  if(e.target.closest("[data-centrer-site]")&&carte&&db){const c=carte.getCenter();db.collection("sites").doc(S.site).set({lat:+c.lat.toFixed(5),lon:+c.lng.toFixed(5),zoom:carte.getZoom(),par:S.moi,maj:Date.now()}).then(()=>toast("Vue de départ de "+SITES[S.site].nom+" enregistrée")).catch(refus)}});
 const COLS=["creneaux","taches","mur","lieux","traces","traits","questions","reponses","membres"];
 const S={creneaux:[],taches:[],mur:[],lieux:[],traces:[],traits:[],questions:[],reponses:[],membres:[],consignes:null,
   moi:null,ecrire:true,vue:"auj",semaine:0,jour:null,type:"",statut:"afaire",theme:"",filtre:"",moiSeul:false,
   outil:"main",couleur:COULEURS[0],calques:{traits:true,traces:true,photos:true,lieux:true},qmode:"repondre",
-  seulQ:location.hash==="#questionnaire",identite:false};
+  site:(()=>{try{return localStorage.getItem("site")||"hanoi"}catch(e){return "hanoi"}})(),seulQ:location.hash==="#questionnaire",identite:false};
 let db=null,user=null,assets=null;
 
 const $=s=>document.querySelector(s);
@@ -559,6 +594,7 @@ function sauver(v){const a=document.activeElement;return {f:[...v.querySelectorA
 function restaurer(v,g){for(const [id,val,ch] of g.f){const e=document.getElementById(id);if(!e||!v.contains(e))continue;if(e.type==="radio"||e.type==="checkbox")e.checked=ch;else if(e.type!=="file")e.value=val}
   if(g.a){const e=document.getElementById(g.a);if(e){e.focus();try{if(g.s!=null)e.setSelectionRange(g.s,g.s)}catch(x){}}}}
 function render(){
+  majSites();
   if(S.seulQ)S.vue="questionnaire";
   const ong=S.seulQ?"":ONGLETS.map(([k,v,c,i])=>`<button data-vue="${k}" aria-current="${S.vue===k?"page":"false"}">${ic(i,20)}<span>${v}</span></button>`).join("");
   $("#ongletsHaut").innerHTML=ong;
@@ -588,7 +624,7 @@ function barreCarte(){
   return `<div class="seg" role="group" aria-label="Outil">${o("main","Déplacer")}${S.ecrire?o("dessin","Dessiner")+o("gomme","Gomme")+o("lieu","+ Lieu"):""}</div>
     ${S.outil==="dessin"?`<div class="g" role="group" aria-label="Couleur">${COULEURS.map(c=>`<button class="nuance" style="--c:${c}" data-nuance="${c}" aria-pressed="${S.couleur===c}" aria-label="Couleur ${c}"></button>`).join("")}<button class="btn" data-annuler-trait="1">Annuler mon dernier trait</button></div>`:""}
     ${typeof gpsBoutons==="function"?gpsBoutons():""}${S.ecrire?`<span class="btn fichier">Importer un trajet GPX<input type="file" id="gpx" accept=".gpx,application/gpx+xml" multiple aria-label="Importer un trajet GPX"></span>`:""}
-    <div class="puces" role="group" aria-label="Calques">${[["traits","Dessins"],["traces","Trajets"],["photos","Photos"],["lieux","Lieux"]].map(([k,l])=>`<button data-calque="${k}" aria-pressed="${S.calques[k]}">${l}</button>`).join("")}</div>`;
+    ${S.ecrire?`<button class="btn" data-centrer-site="1" title="Enregistre la vue actuelle comme vue de départ du site">Vue de départ du site ici</button>`:""}<div class="puces" role="group" aria-label="Calques">${[["traits","Dessins"],["traces","Trajets"],["photos","Photos"],["lieux","Lieux"]].map(([k,l])=>`<button data-calque="${k}" aria-pressed="${S.calques[k]}">${l}</button>`).join("")}</div>`;
 }
 const ll=pts=>{const r=[];for(let i=0;i<pts.length;i+=2)r.push([pts[i+1],pts[i]]);return r};
 function majCarte(){
@@ -607,7 +643,7 @@ function majCarte(){
 }
 function centrer(){
   const pts=[...S.lieux.filter(l=>l.lat!=null).map(l=>[l.lat,l.lon]),...S.mur.filter(m=>m.lat!=null).map(m=>[m.lat,m.lon])];
-  if(pts.length>1)carte.fitBounds(pts,{padding:[40,40],maxZoom:16});else carte.setView(pts[0]||VUE_DEPART,pts.length?16:14);
+  if(pts.length>1)carte.fitBounds(pts,{padding:[40,40],maxZoom:16});else carte.setView(pts[0]||siteCentre(),pts.length?16:siteZoom());
 }
 function initCarte(){
   if(carte){carte.remove();carte=null}
@@ -619,7 +655,7 @@ function initCarte(){
   L.control.layers(fonds,{"Fond SiteScope (Bãi Giữa)":sitescope},{position:"bottomleft"}).addTo(carte);
   carte.on("baselayerchange",e=>{try{localStorage.setItem("fond",e.name)}catch(x){}});
   for(const k of ["traces","traits","photos","lieux","moi"])couches[k]=L.layerGroup().addTo(carte);
-  carte.setView(VUE_DEPART,14);
+  carte.setView(siteCentre(),siteZoom());
   carte.on("click",e=>{if(S.outil==="lieu")ouvrir("lieux",null,{lat:+e.latlng.lat.toFixed(6),lon:+e.latlng.lng.toFixed(6)})});
   const z=$("#carte"),pointeurs=new Set();L.DomEvent.disableClickPropagation(z.querySelector(".zoom"));
   z.addEventListener("pointerdown",e=>{
@@ -751,7 +787,7 @@ $("#formulaire").addEventListener("submit",async ev=>{
     const prev={...o};delete prev.id;
     if(col==="questions"&&!id)prev.ordre=Math.max(0,...S.questions.map(q=>q.ordre||0))+1;
     const now=Date.now();
-    const ref=col==="consignes"?db.doc("consignes/texte"):col==="membres"?db.doc("membres/"+S.moi):id?db.collection(col).doc(id):db.collection(col).doc();
+    const ref=col==="consignes"?db.doc("consignes/"+consId()):col==="membres"?db.doc("membres/"+S.moi):id?db.collection(col).doc(id):db.collection(col).doc();
     await ref.set({...prev,...d,par:S.moi,maj:now,auteur:prev.auteur??S.moi,cree:prev.cree??now});
     if(fichier&&o.photo&&assets)assets.delete(o.photo).catch(()=>{});
     if(col==="creneaux"&&d.date){S.jour=d.date;S.semaine=Math.round((parse(lundiDe(d.date))-parse(lundiDe(auj())))/6048e5)}
@@ -806,7 +842,7 @@ document.addEventListener("click",async ev=>{
   if(!t||t.closest("dialog"))return;
   const d=t.dataset;
   if(t.id==="moiBtn"){ouvrir("membres",S.moi,{});return}
-  if(t.id==="fab"){S.vue==="consignes"?ouvrir("consignes","texte",{}):ouvrir({auj:"creneaux",semaine:"creneaux",taches:"taches",mur:"mur"}[S.vue],null,{});return}
+  if(t.id==="fab"){S.vue==="consignes"?ouvrir("consignes",consId(),{}):ouvrir({auj:"creneaux",semaine:"creneaux",taches:"taches",mur:"mur"}[S.vue],null,{});return}
   if(d.vue){S.vue=d.vue;try{localStorage.setItem("vue",S.vue)}catch(e){}render();scrollTo(0,0);return}
   if(d.sem!==undefined){S.semaine=d.sem==="0"?0:S.semaine+Number(d.sem);S.jour=null;render();return}
   if(d.jour){S.jour=d.jour;render();return}
