@@ -70,6 +70,10 @@ insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_typ
   on conflict (id) do nothing;
 drop policy if exists "membres envoient des photos" on storage.objects;
 drop policy if exists "membres suppriment des photos" on storage.objects;
+drop policy if exists "membres voient les photos" on storage.objects;
+-- Supabase exige le droit de lecture pour pouvoir supprimer un fichier
+create policy "membres voient les photos" on storage.objects for select to authenticated
+  using (bucket_id = 'photos' and public.est_membre());
 create policy "membres envoient des photos" on storage.objects for insert to authenticated
   with check (bucket_id = 'photos' and public.est_membre());
 create policy "membres suppriment des photos" on storage.objects for delete to authenticated
