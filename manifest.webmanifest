@@ -3,6 +3,7 @@
   "short_name": "Atlas",
   "description": "Emploi du temps, tâches, carte, photos et questionnaire du groupe.",
   "lang": "fr",
+  "id": "./",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
@@ -10,8 +11,8 @@
   "background_color": "#17302a",
   "theme_color": "#17302a",
   "icons": [
-    { "src": "icone-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "icone-512.png", "sizes": "512x512", "type": "image/png" },
-    { "src": "icone-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    { "src": "logo2-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "logo2-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "logo2-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ]
 }

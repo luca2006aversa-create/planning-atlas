@@ -3,9 +3,9 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#17302a">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" href="icone.svg" type="image/svg+xml">
-<link rel="icon" href="icone-48.png" sizes="48x48">
-<link rel="apple-touch-icon" href="icone-180.png">
+<link rel="icon" href="logo2.svg" type="image/svg+xml">
+<link rel="icon" href="logo2-48.png" sizes="48x48">
+<link rel="apple-touch-icon" href="logo2-180.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Atlas">
@@ -105,12 +105,14 @@ h2{font:700 .8rem var(--display);letter-spacing:.12em;text-transform:uppercase;c
 /* créneaux */
 .creneau{display:grid;grid-template-columns:auto 1fr;gap:2px 12px;width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px;min-width:0}
 .creneau:hover{border-color:var(--muted)}
-.creneau .heure{grid-row:span 3;font:700 1.05rem/1.1 var(--display);font-variant-numeric:tabular-nums;color:var(--c);min-width:44px;display:flex;flex-direction:column}
+.creneau .heure{grid-row:span 4;font:700 1.05rem/1.1 var(--display);font-variant-numeric:tabular-nums;color:var(--c);min-width:44px;display:flex;flex-direction:column}
 .creneau .heure small{font-size:.8rem;color:var(--muted);font-weight:600}
 .creneau .titre{font-weight:700;overflow-wrap:anywhere;line-height:1.3}
 .creneau .meta{font-size:.8rem;color:var(--muted);overflow-wrap:anywhere;display:flex;flex-wrap:wrap;gap:2px 10px}
 .creneau .meta span{display:inline-flex;gap:4px;align-items:center}
 .creneau .type{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--c);display:flex;gap:6px;align-items:center}
+.creneau,.tache{position:relative}
+.creneau .signe{grid-column:2}
 .creneau.passe{opacity:.55}
 .creneau.encours{border-color:var(--jaune);box-shadow:0 0 0 2px var(--jaune)}
 .badge{font-size:.7rem;font-weight:800;border-radius:999px;padding:1px 8px;background:var(--jaune);color:var(--on-jaune);text-transform:none;letter-spacing:0}
@@ -316,7 +318,7 @@ body{margin:0}img{max-width:100%}[hidden]{display:none!important}
 
 <header class="pad">
   <div class="entete">
-    <img class="logo" src="icone.svg" alt="" width="34" height="34"><div class="marque"><b>Planning <span>Atlas</span></b><small id="sousTitre">Workshop S5 · Hanoï</small></div>
+    <img class="logo" src="logo2.svg" alt="" width="34" height="34"><div class="marque"><b>Planning <span>Atlas</span></b><small id="sousTitre">Workshop S5 · Hanoï</small></div>
     <div class="onglets" id="ongletsHaut"></div>
     <button class="moi mob" data-vue="consignes" aria-label="Consignes"><svg width="16" height="16"><use href="#i-con"/></svg></button>
     <button class="moi" id="installer" hidden>Installer l'appli</button>
@@ -429,6 +431,10 @@ const cherche=(o,...k)=>!S.filtre||k.some(x=>String(o[x]??"").toLowerCase().incl
 const parHeure=(a,b)=>(a.debut||"99").localeCompare(b.debut||"99");
 const typeDe=c=>TYPES[c.type]?c.type:"autre";
 const statutDe=t=>STATUTS[t.statut]?t.statut:"afaire";
+const crea=o=>o.auteur||o.par;
+const recent=o=>o.maj&&Date.now()-o.maj<864e5;
+const pointNeuf=o=>recent(o)?`<span class="pt-neuf" title="Modifié ${esc(quand(o.maj))}" aria-label="Modifié récemment"></span>`:"";
+const signe=o=>{const a=crea(o);if(!a)return"";return `<span class="signe">${ic("i-gens",12)} ${auteur({par:a})}${o.par&&o.par!==a?` · modifié par ${auteur(o)}`:""}</span>`};
 const auteur=o=>o&&o.par?`<span data-uid="${esc(o.par)}">…</span>`:"quelqu'un";
 const dans=m=>m<60?`dans ${m} min`:`dans ${Math.floor(m/60)} h${m%60?String(m%60).padStart(2,"0"):""}`;
 const pseudoDe=id=>{const m=S.membres.find(x=>x.id===id);return m&&m.pseudo||""};
@@ -449,21 +455,23 @@ function carteCreneau(c,{etat=false}={}){
     else if(d!=null&&now>=d){cls=" encours";badge=`<span class="badge">En cours</span>`}
     else if(d!=null&&d-now<=180)badge=`<span class="badge">${dans(d-now)}</span>`;
   }
-  return `<button class="creneau${cls}" style="--c:var(--t-${t})" data-ouvrir="creneaux" data-id="${esc(c.id)}">
+  return `<button class="creneau${cls}" style="--c:var(--t-${t})" data-ouvrir="creneaux" data-id="${esc(c.id)}">${pointNeuf(c)}
     <span class="heure">${esc(c.debut||"—")}${c.fin?`<small>${esc(c.fin)}</small>`:""}</span>
     <span class="type"><span class="pastille" style="--c:var(--t-${t})"></span>${TYPES[t]} ${badge}</span>
     <span class="titre">${esc(c.titre)}</span>
     ${c.lieu||c.qui?`<span class="meta">${c.lieu?`<span>${ic("i-lieu",13)}${esc(c.lieu)}</span>`:""}${c.qui?`<span>${ic("i-gens",13)}${esc(c.qui)}</span>`:""}</span>`:""}
+    ${signe(c)}
   </button>`;
 }
 function carteTache(t){
   const st=statutDe(t),tard=t.echeance&&t.echeance<auj()&&st!=="fait";
   const suiv=ORDRE[(ORDRE.indexOf(st)+1)%3];
-  return `<div class="tache ${st}" style="--c:var(--s-${st})">
+  return `<div class="tache ${st}" style="--c:var(--s-${st})">${pointNeuf(t)}
     <button class="rond ${st}" data-statut="${suiv}" data-id="${esc(t.id)}" aria-label="${STATUTS[st]} : passer à « ${STATUTS[suiv]} »" title="Passer à « ${STATUTS[suiv]} »">${st==="fait"?ic("i-ok",14):""}</button>
     <button class="corps" data-ouvrir="taches" data-id="${esc(t.id)}">
       <span class="titre">${esc(t.titre)}</span>
       <span class="meta">${t.theme?`<span class="etiquette">${esc(t.theme)}</span>`:""}${t.responsable?`<span>${esc(t.responsable)}</span>`:""}${t.echeance?`<span class="${tard?"retard":""}">${tard?"En retard · ":""}${esc(fmt(t.echeance,{weekday:"short",day:"numeric",month:"short"}))}</span>`:""}</span>
+      ${signe(t)}
     </button>
   </div>`;
 }
@@ -533,7 +541,7 @@ const VUES={
     const themes=[...new Set(S.mur.map(m=>m.theme).filter(Boolean))].sort();
     if(S.theme&&!themes.includes(S.theme))S.theme="";
     const m=S.mur.filter(x=>cherche(x,"texte","theme")&&(!S.theme||x.theme===S.theme)).sort((a,b)=>(b.epingle?1:0)-(a.epingle?1:0)||(b.cree||0)-(a.cree||0));
-    return `<div class="tete"><h1>Mur<small>Notes, croquis et photos du terrain</small></h1></div>
+    return `<div class="tete"><h1>Mur<small>Notes, croquis et photos du terrain</small></h1>${S.ecrire&&db?`<button class="btn" data-camera="mur">${ic("i-mur",16)}Prendre une photo</button>`:""}</div>
     ${themes.length?`<div class="puces">${[["","Tout"],...themes.map(x=>[x,x])].map(([k,v])=>`<button data-theme="${esc(k)}" aria-pressed="${S.theme===k}">${esc(v)}</button>`).join("")}</div>`:""}
     ${m.length?`<div class="mur">${m.map(post).join("")}</div>`:vide("Aucune note pour l'instant. Ajoute une observation, un croquis ou une photo.","mur","Ajouter une note")}`;
   },
@@ -605,6 +613,7 @@ function render(){
   $("#pseudos").innerHTML=S.membres.map(m=>`<option value="${esc(m.pseudo)}">`).join("");
   const mb=$("#moiBtn");mb.hidden=!S.moi;mb.querySelector("span").textContent=monPseudo()||"Choisir mon identifiant";
   const v=$("#vue");
+  if(S.vue==="tableau"){tbRendre();return}
   if(S.vue==="carte"){if(!$("#carte")){v.innerHTML=VUES.carte();initCarte()}majCarte();return}
   const g=sauver(v);v.innerHTML=VUES[S.vue]();restaurer(v,g);nommer(v);
 }
@@ -735,7 +744,7 @@ function ouvrir(col,id,defaut){
     :type==="checkbox"?`<label class="case"><input type="checkbox" id="${idc}"${v?" checked":""}>${lab}</label>`
     :type==="lieu"?`<div class="champ"><label for="${idc}">${lab}</label><select id="${idc}"><option value="">Aucun pour l'instant</option>${S.lieux.map(l=>`<option value="${esc(l.id)}"${l.id===v?" selected":""}>${esc(l.nom)}</option>`).join("")}</select></div>`
     :type==="photo"?`<div class="champ"><span class="l">${lab}</span><div class="depot">${o.photo?`<img class="apercu" id="apercu" src="${esc(photoUrl(o.photo))}" alt="Photo actuelle">`:`<img class="apercu" id="apercu" alt="" hidden>`}
-      ${assets?`<input type="file" id="${idc}" accept="image/*">`:`<span class="qui">Ajouter une photo demande le niveau « Éditeur » sur cette page.</span>`}
+      ${assets?`<input type="file" id="${idc}" accept="image/*"><button type="button" class="btn" data-camera="form">Prendre avec l'appareil (position + direction)</button>`:`<span class="qui">Ajouter une photo demande le niveau « Éditeur » sur cette page.</span>`}
       <span class="qui" id="exifInfo">${o.lat!=null?`Placée sur la carte${o.cap!=null?`, vers ${cap8(o.cap)} (${o.cap}°)`:""}.`:""}</span></div></div>`
     :`<div class="champ"><label for="${idc}">${lab}${req?" *":""}</label><input type="${type}" id="${idc}" value="${esc(v)}"${req?" required":""}${liste} placeholder="${esc(aide||"")}"${k==="pseudo"?' maxlength="30" autocomplete="nickname"':""}></div>`;
   }
@@ -863,7 +872,7 @@ document.addEventListener("click",async ev=>{
   if(d.copier){try{await navigator.clipboard.writeText(d.copier);toast("Lien copié")}catch(e){const c=t.previousElementSibling;const r=document.createRange();r.selectNodeContents(c);getSelection().removeAllRanges();getSelection().addRange(r);toast("Lien sélectionné : copie-le")}return}
   if(d.statut){
     if(!db){toast("Connecte-toi à claude.ai pour modifier.");return}
-    try{await db.collection("taches").doc(d.id).update({statut:d.statut,par:S.moi,maj:Date.now()});toast(`Tâche : ${STATUTS[d.statut].toLowerCase()}`)}catch(e){refus(e)}return}
+    try{await db.collection("taches").doc(d.id).update({statut:d.statut,par:S.moi,maj:Date.now(),auteur:(S.taches.find(x=>x.id===d.id)||{}).auteur||(S.taches.find(x=>x.id===d.id)||{}).par||S.moi});toast(`Tâche : ${STATUTS[d.statut].toLowerCase()}`)}catch(e){refus(e)}return}
   if(d.ouvrir)ouvrir(d.ouvrir,d.id,d.date?{date:d.date}:{});
 });
 document.addEventListener("change",e=>{if(e.target.id==="gpx"&&e.target.files.length){if(!db)return toast("Connecte-toi à claude.ai pour importer.");importerGpx([...e.target.files]);e.target.value=""}});
@@ -888,5 +897,6 @@ matchMedia("(prefers-color-scheme: dark)").addEventListener("change",majTheme);
 $("#themeBtn").addEventListener("click",()=>{const t=sombre()?"light":"dark";document.documentElement.dataset.theme=t;try{localStorage.setItem("theme",t)}catch(e){}majTheme()});
 function etat(ok,t){const e=$("#etat");e.classList.toggle("ok",ok);e.querySelector("span").textContent=t}
 </script>
+<script src="extras.js"></script>
 <script src="sb.js"></script>
 </body></html>
