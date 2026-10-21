@@ -10,7 +10,7 @@ const exLigne = (c) => `${c.debut || ""}${c.fin ? "–" + c.fin : ""}`;
 
 function exJours() {
   const l = plus(lundiDe(auj()), 7 * S.semaine), nb = EX.portee === "sem" ? 7 : EX.portee === "deux" ? 14 : null;
-  let cr = S.creneaux.filter((c) => c.date && (!EX.moi || pourMoi(c)));
+  let cr = S.creneaux.filter((c) => c.date && (!EX.moi || estMoi(c.qui) || /tous/i.test(c.qui || "")));
   if (nb) { const fin = plus(l, nb - 1); cr = cr.filter((c) => c.date >= l && c.date <= fin); }
   const dates = [...new Set(cr.map((c) => c.date))].sort();
   return { jours: dates.map((d) => ({ date: d, items: cr.filter((c) => c.date === d).sort(parHeure) })), du: dates[0], au: dates[dates.length - 1] };

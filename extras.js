@@ -16,6 +16,7 @@ style.textContent = `
 .tb-vue.gomme{cursor:not-allowed}
 .tb-monde{position:absolute;left:0;top:0;transform-origin:0 0}
 .tb-svg{position:absolute;left:0;top:0;width:1px;height:1px;overflow:visible;pointer-events:none}
+.tb-svg path.lien{fill:none;stroke:#3b3f45;stroke-width:2.5;stroke-linecap:round}.tb-svg path.lien.sel{stroke:#2d6a9f;stroke-width:4}.tb-svg path.hit{fill:none;stroke:transparent;stroke-width:16}.tb-vue.main .tb-svg path.hit,.tb-vue.gomme .tb-svg path.hit{pointer-events:stroke;cursor:pointer}.tb-el.source{outline:3px dashed #e4572e;outline-offset:3px}
 .tb-svg polyline{fill:none;stroke-linecap:round;stroke-linejoin:round}
 .tb-vue.gomme .tb-svg polyline{pointer-events:stroke}
 .tb-el{position:absolute;box-sizing:border-box;color:#1d1e20}
@@ -48,28 +49,31 @@ document.querySelector("svg defs, svg")?.insertAdjacentHTML("beforeend",
   `<symbol id="i-tab" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21l4-4 4 4M7 12l3-3 3 2 4-4"/></symbol>`);
 
 /* ---------- tableau blanc ---------- */
-const TB_COULEURS = ["#fff3b0", "#ffd9cc", "#d6e9ff", "#d9f2d0", "#eadcff", "#ffffff"];
+const TB_COULEURS = ["#fff3b0", "#ffd9cc", "#ffd6e8", "#ffe0b2", "#d6e9ff", "#d9f2d0", "#eadcff", "#e4e4e0", "#ffffff"];
+const TB_FONDS = [["points", "Points"], ["grille", "Quadrillé"], ["uni", "Uni"]];
 const TB_ENCRES = ["#1d1e20", "#c0392b", "#2f6fb0", "#2e7d52", "#e4572e", "#7b4fa0"];
-const T = { cam: { x: 40, y: 40, z: 1 }, outil: "main", encre: "#1d1e20", ep: 3, sel: null, ptrs: new Map(), geste: null, edition: false, differe: false, aEditer: null, vu: null };
+const T = { cam: { x: 40, y: 40, z: 1 }, outil: "main", encre: "#1d1e20", ep: 3, sel: null, ptrs: new Map(), geste: null, edition: false, differe: false, aEditer: null, vu: null, lienDe: null, fond: (() => { try { return localStorage.getItem("tbfond") || "points"; } catch (e) { return "points"; } })() };
 const tbPeut = () => S.ecrire && db;
 const tbDoc = (id) => S.tableau.find((x) => x.id === id);
 const tbOutil = (k, l) => `<button data-tbo="${k}" aria-pressed="${T.outil === k}">${l}</button>`;
 
 function tbBarreHtml() {
   const s = tbDoc(T.sel);
-  const couleurs = s && s.k !== "image" && s.k !== "trait" ? TB_COULEURS.map((c) => `<button class="nuance" style="--c:${c}" data-tbcouleur="${c}" aria-label="Couleur ${c}"></button>`).join("") : "";
-  return `<div class="seg" role="group" aria-label="Outil">${tbOutil("main", "Déplacer")}${tbPeut() ? tbOutil("note", "Note") + tbOutil("titre", "Titre") + tbOutil("stylo", "Stylo") + tbOutil("gomme", "Gomme") : ""}</div>
+  const couleurs = s && (s.k === "note" || s.k === "titre") ? TB_COULEURS.map((c) => `<button class="nuance" style="--c:${c}" data-tbcouleur="${c}" aria-label="Couleur ${c}"></button>`).join("") : "";
+  return `<div class="seg" role="group" aria-label="Outil">${tbOutil("main", "Déplacer")}${tbPeut() ? tbOutil("note", "Note") + tbOutil("titre", "Titre") + tbOutil("stylo", "Stylo") + tbOutil("gomme", "Gomme") + tbOutil("lier", "Relier") : ""}</div>
   ${T.outil === "stylo" ? `<div class="g" role="group" aria-label="Encre" style="display:flex;gap:6px">${TB_ENCRES.map((c) => `<button class="nuance" style="--c:${c}" data-tbencre="${c}" aria-pressed="${T.encre === c}" aria-label="Encre ${c}"></button>`).join("")}</div>
   <div class="seg" role="group" aria-label="Épaisseur">${[[2, "Fin"], [4, "Moyen"], [9, "Gras"]].map(([e, l]) => `<button data-tbep="${e}" aria-pressed="${T.ep === e}">${l}</button>`).join("")}</div>` : ""}
   ${tbPeut() ? `<span class="btn fichier" role="button">Photo<input type="file" id="tbFichier" accept="image/*" aria-label="Ajouter une photo au tableau"></span>
   <button class="btn" data-tbmur="1">Photo du mur</button><button class="btn" data-camera="tableau">Appareil</button>` : ""}
+  <div class="seg" role="group" aria-label="Fond">${TB_FONDS.map(([k, l]) => `<button data-tbfond="${k}" aria-pressed="${T.fond === k}">${l}</button>`).join("")}</div>
   ${couleurs}${s && tbPeut() ? `<button class="btn rouge" data-tbsuppr="1">Supprimer</button>` : ""}`;
 }
 function tbCam() {
   const v = $("#tbVue"); if (!v) return;
   $("#tbMonde").style.transform = `translate(${T.cam.x}px,${T.cam.y}px) scale(${T.cam.z})`;
-  v.style.backgroundSize = `${32 * T.cam.z}px ${32 * T.cam.z}px`;
-  v.style.backgroundPosition = `${T.cam.x}px ${T.cam.y}px`;
+  const g = `${32 * T.cam.z}px ${32 * T.cam.z}px`; v.style.backgroundSize = T.fond === "grille" ? `${g},${g}` : g;
+  v.style.backgroundImage = T.fond === "uni" ? "none" : T.fond === "grille" ? "linear-gradient(#dfe3dc 1px,transparent 1px),linear-gradient(90deg,#dfe3dc 1px,transparent 1px)" : "radial-gradient(#cfd3cc 1.2px,transparent 1.3px)";
+  v.style.backgroundPosition = T.fond === "grille" ? `${T.cam.x}px ${T.cam.y}px,${T.cam.x}px ${T.cam.y}px` : `${T.cam.x}px ${T.cam.y}px`;
 }
 const tbPt = (e) => { const r = $("#tbVue").getBoundingClientRect(); return { x: (e.clientX - r.left - T.cam.x) / T.cam.z, y: (e.clientY - r.top - T.cam.y) / T.cam.z }; };
 const tbCentre = () => { const r = $("#tbVue").getBoundingClientRect(); return { x: (r.width / 2 - T.cam.x) / T.cam.z, y: (r.height / 2 - T.cam.y) / T.cam.z }; };
@@ -78,12 +82,13 @@ function tbDessiner() {
   const sv = $("#tbSvg"); if (!sv) return;
   if (T.edition) { T.differe = true; return; }
   const tri = [...S.tableau].sort((a, b) => (a.cree || 0) - (b.cree || 0));
-  sv.innerHTML = tri.filter((d) => d.k === "trait").map((d) => {
+  sv.innerHTML = `<defs><marker id="tbFleche" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#3b3f45"/></marker></defs><g id="tbLiensG"></g>` + tri.filter((d) => d.k === "trait").map((d) => {
     const p = d.pts || [], q = []; for (let i = 0; i + 1 < p.length; i += 2) q.push(p[i] + "," + p[i + 1]);
     return `<polyline data-tid="${esc(d.id)}" points="${q.join(" ")}" stroke="${esc(d.couleur || "#1d1e20")}" stroke-width="${+d.ep || 3}"/>`;
   }).join("");
-  $("#tbEls").innerHTML = tri.filter((d) => d.k !== "trait").map((d) => {
-    const sel = T.sel === d.id ? " sel" : "", poi = tbPeut() ? `<i class="poignee" data-tbpoignee="1"></i>` : "";
+  tbLiens();
+  $("#tbEls").innerHTML = tri.filter((d) => d.k !== "trait" && d.k !== "lien").map((d) => {
+    const sel = (T.sel === d.id ? " sel" : "") + (T.lienDe === d.id ? " source" : ""), poi = tbPeut() ? `<i class="poignee" data-tbpoignee="1"></i>` : "";
     const signe = `<span class="signe">${d.par ? auteur(d) : ""}</span>`;
     if (d.k === "image") return `<div class="tb-el img${sel}" data-tid="${esc(d.id)}" style="${tbStyle(d)}"><img src="${esc(photoUrl(d.photo))}" alt="" draggable="false">${poi}${sel ? signe : ""}</div>`;
     const fond = d.k === "titre" ? "" : `background:${esc(d.couleur || TB_COULEURS[0])};`;
@@ -92,19 +97,33 @@ function tbDessiner() {
   nommer($("#tbEls"));
   if (T.aEditer) { const id = T.aEditer; T.aEditer = null; tbEcrire(id); }
 }
+/* liens entre éléments : une flèche du bord de l'un au bord de l'autre */
+function tbBord(d, vers) {
+  const cx = d.x + d.w / 2, cy = d.y + d.h / 2, dx = vers.x - cx, dy = vers.y - cy; if (!dx && !dy) return { x: cx, y: cy };
+  const k = Math.min(dx ? (d.w / 2 + 4) / Math.abs(dx) : 1e9, dy ? (d.h / 2 + 4) / Math.abs(dy) : 1e9); return { x: cx + dx * k, y: cy + dy * k };
+}
+function tbLiens() {
+  const g = document.getElementById("tbLiensG"); if (!g) return;
+  g.innerHTML = S.tableau.filter((d) => d.k === "lien").map((l) => {
+    const a = tbDoc(l.de), b = tbDoc(l.vers); if (!a || !b || a.k === "trait" || b.k === "trait") return "";
+    const ca = { x: a.x + a.w / 2, y: a.y + a.h / 2 }, cb = { x: b.x + b.w / 2, y: b.y + b.h / 2 }, p = tbBord(a, cb), q = tbBord(b, ca);
+    const mx = (p.x + q.x) / 2 - (q.y - p.y) * .12, my = (p.y + q.y) / 2 + (q.x - p.x) * .12, dd = `M${p.x} ${p.y}Q${mx} ${my} ${q.x} ${q.y}`;
+    return `<path class="lien${T.sel === l.id ? " sel" : ""}" d="${dd}" marker-end="url(#tbFleche)"/><path class="hit" data-tid="${esc(l.id)}" data-lien="1" d="${dd}"/>`;
+  }).join("");
+}
 function tbVue() {
   return `<div class="tete"><h1>Tableau<small>Un grand tableau blanc partagé : notes, schémas à main levée, photos</small></h1></div>
   <div class="tb-barre" id="tbBarre"></div>
   <div class="tb-vue main" id="tbVue"><div class="tb-monde" id="tbMonde"><svg class="tb-svg" id="tbSvg"></svg><div id="tbEls"></div></div>
     <div class="tb-ui"><button class="btn ico" data-tbzoom="1.4" aria-label="Zoomer">${ic("i-plus")}</button><button class="btn ico" data-tbzoom="0.7" aria-label="Dézoomer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14"/></svg></button><button class="btn ico" data-tbzoom="0" aria-label="Tout voir">${ic("i-carte")}</button></div>
     <div class="tb-aide" id="tbAide"></div></div>
-  <p class="qui">Glisse pour te déplacer, pince ou molette pour zoomer. Touche une note déjà choisie pour écrire dedans. Tout le groupe voit les changements en direct.</p>`;
+  <p class="qui">Glisse pour te déplacer, pince ou molette pour zoomer. « Relier » trace une flèche entre deux éléments ; les couleurs des notes servent de thèmes. Touche une note déjà choisie pour écrire dedans. Tout le groupe voit les changements en direct.</p>`;
 }
 function tbRendre() {
   if (!$("#tbVue")) { $("#vue").innerHTML = tbVue(); T.vu = null; }
   const b = $("#tbBarre"); if (b) { const h = tbBarreHtml(); if (b.dataset.h !== h) { b.innerHTML = h; b.dataset.h = h; } }
   const v = $("#tbVue"); v.className = "tb-vue " + T.outil;
-  $("#tbAide").textContent = !S.tableau.length ? "Tableau vide : choisis « Note » puis touche le tableau." : "";
+  $("#tbAide").textContent = T.outil === "lier" ? (T.lienDe ? "Touche l'élément à relier." : "Touche le premier élément, puis le second.") : !S.tableau.length ? "Tableau vide : choisis « Note » puis touche le tableau." : "";
   if (T.vu !== S.site) { T.vu = S.site; tbTout(true); }
   tbCam(); tbDessiner();
 }
@@ -112,7 +131,7 @@ function tbTout(sansAnim) {
   const v = $("#tbVue"); if (!v) return;
   const r = v.getBoundingClientRect(), it = S.tableau.filter((d) => d.k !== "trait");
   const pts = [];
-  for (const d of S.tableau) { if (d.k === "trait") for (let i = 0; i + 1 < (d.pts || []).length; i += 2) pts.push([d.pts[i], d.pts[i + 1]]); else pts.push([d.x, d.y], [d.x + d.w, d.y + d.h]); }
+  for (const d of S.tableau) { if (d.k === "lien") continue; if (d.k === "trait") for (let i = 0; i + 1 < (d.pts || []).length; i += 2) pts.push([d.pts[i], d.pts[i + 1]]); else pts.push([d.x, d.y], [d.x + d.w, d.y + d.h]); }
   if (!pts.length) { T.cam = { x: 40, y: 40, z: 1 }; return; }
   const x0 = Math.min(...pts.map((p) => p[0])), x1 = Math.max(...pts.map((p) => p[0])), y0 = Math.min(...pts.map((p) => p[1])), y1 = Math.max(...pts.map((p) => p[1]));
   const z = Math.max(.15, Math.min(1.5, Math.min((r.width - 60) / Math.max(1, x1 - x0), (r.height - 60) / Math.max(1, y1 - y0))));
@@ -140,7 +159,7 @@ async function tbAjouter(d) {
   const id = nouvelId(), now = Date.now();
   try { await db.collection("tableau").doc(id).set({ ...d, par: S.moi, auteur: S.moi, cree: now, maj: now }); return id; } catch (e) { refus(e); return null; }
 }
-async function tbSupprimer(id) { try { await db.collection("tableau").doc(id).delete(); if (T.sel === id) T.sel = null; } catch (e) { refus(e); } }
+async function tbSupprimer(id) { try { await db.collection("tableau").doc(id).delete(); if (T.sel === id) T.sel = null; for (const l of S.tableau.filter((x) => x.k === "lien" && (x.de === id || x.vers === id))) await db.collection("tableau").doc(l.id).delete(); } catch (e) { refus(e); } }
 async function tbImage(photo, ratio) {
   const c = tbCentre(), w = 300, h = Math.round(w * (ratio || .75));
   const id = await tbAjouter({ k: "image", photo, x: Math.round(c.x - w / 2), y: Math.round(c.y - h / 2), w, h });
@@ -173,7 +192,13 @@ function tbInit() {
     if (T.ptrs.size === 2) { tbFinTrait(true); const [a, b] = [...T.ptrs.values()]; T.geste = { t: "pince", d: Math.hypot(a.x - b.x, a.y - b.y), cam: { ...T.cam }, c: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 } }; return; }
     z.setPointerCapture(e.pointerId);
     const el = e.target.closest(".tb-el"), id = el && el.dataset.tid, p = tbPt(e), d = id && tbDoc(id);
-    if (T.outil === "gomme") { const h = e.target.closest("polyline"); T.geste = { t: "gomme" }; if (h && tbPeut()) tbSupprimer(h.dataset.tid); else if (d && tbPeut() && T.outil === "gomme") tbSupprimer(id); return; }
+    const lienH = e.target.closest("path[data-lien]");
+    if (lienH && T.outil === "main") { T.sel = lienH.dataset.tid; T.geste = { t: "rien" }; tbSelectionner(); tbLiens(); return; }
+    if (T.outil === "lier" && tbPeut()) {
+      if (d && d.k !== "trait") { if (!T.lienDe) { T.lienDe = id; } else if (T.lienDe !== id) { if (!S.tableau.some((x) => x.k === "lien" && x.de === T.lienDe && x.vers === id)) tbAjouter({ k: "lien", de: T.lienDe, vers: id }); T.lienDe = null; } else T.lienDe = null; } else T.lienDe = null;
+      T.geste = { t: "rien" }; tbRendre(); tbDessiner(); return;
+    }
+    if (T.outil === "gomme") { const h = e.target.closest("polyline,path[data-lien]"); T.geste = { t: "gomme" }; if (h && tbPeut()) tbSupprimer(h.dataset.tid); else if (d && tbPeut() && T.outil === "gomme") tbSupprimer(id); return; }
     if (T.outil === "stylo" && tbPeut()) { T.geste = { t: "stylo", pts: [p] }; const pl = document.createElementNS("http://www.w3.org/2000/svg", "polyline"); pl.setAttribute("stroke", T.encre); pl.setAttribute("stroke-width", T.ep); pl.setAttribute("points", p.x + "," + p.y); pl.id = "tbLive"; $("#tbSvg").appendChild(pl); return; }
     if ((T.outil === "note" || T.outil === "titre") && tbPeut() && !d) {
       const titre = T.outil === "titre", w = titre ? 360 : 200, h = titre ? 56 : 150; T.outil = "main";
@@ -198,16 +223,16 @@ function tbInit() {
       const p = tbPt(e), dx = p.x - g.p0.x, dy = p.y - g.p0.y;
       if (!g.bouge && Math.hypot(dx, dy) * T.cam.z < 5) return;
       if (!tbPeut()) return; g.bouge = true; const d = tbDoc(g.id); d.x = Math.round(g.d0.x + dx); d.y = Math.round(g.d0.y + dy);
-      g.el.style.left = d.x + "px"; g.el.style.top = d.y + "px";
+      g.el.style.left = d.x + "px"; g.el.style.top = d.y + "px"; tbLiens();
     } else if (g.t === "taille") {
       const p = tbPt(e), d = tbDoc(g.id); d.w = Math.max(60, Math.round(g.d0.w + p.x - g.p0.x));
       d.h = d.k === "image" ? Math.round(d.w * g.d0.h / g.d0.w) : Math.max(40, Math.round(g.d0.h + p.y - g.p0.y));
-      const el = document.querySelector(`.tb-el[data-tid="${CSS.escape(g.id)}"]`); if (el) { el.style.width = d.w + "px"; el.style.height = d.h + "px"; }
+      const el = document.querySelector(`.tb-el[data-tid="${CSS.escape(g.id)}"]`); if (el) { el.style.width = d.w + "px"; el.style.height = d.h + "px"; } tbLiens();
     } else if (g.t === "stylo") {
       const p = tbPt(e), q = g.pts[g.pts.length - 1];
       if (Math.hypot(p.x - q.x, p.y - q.y) * T.cam.z > 2) { g.pts.push(p); $("#tbLive").setAttribute("points", g.pts.map((a) => a.x.toFixed(1) + "," + a.y.toFixed(1)).join(" ")); }
     } else if (g.t === "gomme") {
-      const h = document.elementFromPoint(e.clientX, e.clientY); const pl = h && h.closest && h.closest("polyline[data-tid]"); if (pl && tbPeut()) tbSupprimer(pl.dataset.tid);
+      const h = document.elementFromPoint(e.clientX, e.clientY); const pl = h && h.closest && h.closest("polyline[data-tid],path[data-lien]"); if (pl && tbPeut()) tbSupprimer(pl.dataset.tid);
     }
   });
   const fin = (e) => {
@@ -231,9 +256,10 @@ function tbFinTrait(annule, g) {
   tbAjouter({ k: "trait", pts, couleur: T.encre, ep: T.ep });
 }
 document.addEventListener("click", (e) => {
-  const c = e.target.closest("[data-tbo],[data-tbencre],[data-tbep],[data-tbcouleur],[data-tbsuppr],[data-tbzoom],[data-tbmur],[data-tbmurphoto],[data-tbfermer],[data-camera]"); if (!c) return;
+  const c = e.target.closest("[data-tbfond],[data-tbo],[data-tbencre],[data-tbep],[data-tbcouleur],[data-tbsuppr],[data-tbzoom],[data-tbmur],[data-tbmurphoto],[data-tbfermer],[data-camera]"); if (!c) return;
   const d = c.dataset;
-  if (d.tbo) { T.outil = d.tbo; if (d.tbo !== "main") T.sel = null; tbRendre(); }
+  if (d.tbfond) { T.fond = d.tbfond; try { localStorage.setItem("tbfond", T.fond); } catch (x) {} tbRendre(); }
+  else if (d.tbo) { T.lienDe = null; T.outil = d.tbo; if (d.tbo !== "main") T.sel = null; tbRendre(); }
   else if (d.tbencre) { T.encre = d.tbencre; tbRendre(); }
   else if (d.tbep) { T.ep = +d.tbep; tbRendre(); }
   else if (d.tbcouleur && T.sel) { const s = tbDoc(T.sel); if (s) { s.couleur = d.tbcouleur; tbMaj(s.id, { couleur: d.tbcouleur }); tbDessiner(); } }

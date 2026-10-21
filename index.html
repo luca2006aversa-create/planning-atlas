@@ -369,7 +369,7 @@ const FORMS={
   creneaux:{nom:"Créneau",champs:[
     ["titre","Quoi","text",1,null,"ex. Relevé des berges, station 3"],["type","Type","choix",0,TYPES],
     ["date","Jour","date",1],["debut","Début","time"],["fin","Fin","time"],
-    ["lieu","Lieu","text",0,null,"ex. Bãi Giữa, rive nord"],["qui","Qui","text",0,null,"Noms séparés par des virgules, ou « tous »"],
+    ["lieu","Lieu","text",0,null,"ex. Bãi Giữa, rive nord"],["qui","Pour qui","pourqui"],
     ["consignes","Consignes et matériel","textarea",0,null,"Rendez-vous, matériel à prendre, ce qu'on doit rapporter…"]]},
   taches:{nom:"Tâche",champs:[
     ["titre","Tâche","text",1],["statut","Statut","choix",0,STATUTS],["responsable","Responsable","text"],
@@ -730,6 +730,25 @@ function tiff(b,t){
 
 /* ---------- formulaire ---------- */
 let edit=null;
+/* « Pour qui » : tout le monde, moi, ou des personnes choisies parmi les identifiants connectés (+ noms écrits à la main). Stocké dans « qui » comme avant. */
+function widgetQui(v){
+  const moi=monPseudo(),noms=String(v||"").split(/[,;]/).map(x=>x.trim()).filter(Boolean),tous=!noms.length||/^tous$/i.test(String(v).trim());
+  const connus=S.membres.map(m=>m.pseudo).filter(Boolean).sort((a,b)=>a.localeCompare(b));
+  const pris=new Set(noms.map(x=>x.toLowerCase())),libres=noms.filter(x=>!connus.some(c=>c.toLowerCase()===x.toLowerCase()));
+  const mode=tous?"tous":(moi&&noms.length===1&&noms[0].toLowerCase()===moi.toLowerCase())?"moi":"sel";
+  return `<div class="champ"><span class="l">Pour qui</span><div class="choix" role="radiogroup" id="qMode">${[["tous","Tout le monde"],...(moi?[["moi","Moi"]]:[]),["sel","Certaines personnes"]].map(([k,l])=>`<label><input type="radio" name="qmode" value="${k}"${k===mode?" checked":""}><span>${l}</span></label>`).join("")}</div>
+    <div id="qSel" class="champ"${mode==="sel"?"":" hidden"}><div class="choix" id="qCases">${connus.map(c=>`<label><input type="checkbox" data-qp="${esc(c)}"${pris.has(c.toLowerCase())?" checked":""}><span>${esc(c)}</span></label>`).join("")||"<span class=\"qui\">Aucun identifiant connecté pour l'instant.</span>"}</div>
+      <input type="text" id="q_libre" value="${esc(libres.join(", "))}" placeholder="Autres noms écrits à la main, séparés par des virgules"></div>
+    <input type="hidden" id="f_qui" value="${esc(String(v||"")||"tous")}"></div>`;
+}
+function majQui(){
+  const m=document.querySelector('input[name="qmode"]:checked');if(!m||!$("#f_qui"))return;
+  $("#qSel").hidden=m.value!=="sel";
+  const v=m.value==="tous"?"tous":m.value==="moi"?monPseudo():[...document.querySelectorAll("#qCases input:checked")].map(x=>x.dataset.qp).concat($("#q_libre").value.split(/[,;]/).map(x=>x.trim()).filter(Boolean)).filter((x,i,a)=>a.indexOf(x)===i).join(", ");
+  $("#f_qui").value=v;
+}
+document.addEventListener("change",e=>{if(e.target.closest("#qMode,#qCases"))majQui()});
+document.addEventListener("input",e=>{if(e.target.id==="q_libre")majQui()});
 const trouver=(col,id)=>col==="consignes"?S.consignes:S[col].find(x=>x.id===id);
 function ouvrir(col,id,defaut){
   const f=FORMS[col];if(!f)return;
@@ -741,8 +760,9 @@ function ouvrir(col,id,defaut){
   const ch={};
   for(const [k,lab,type,req,opts,aide] of f.champs){
     const v=o[k]??"",idc="f_"+k,liste=k==="qui"||k==="responsable"?` list="pseudos"`:"";
-    ch[k]=type==="textarea"?`<div class="champ"><label for="${idc}">${lab}</label><textarea id="${idc}" rows="${col==="consignes"?16:3}" placeholder="${esc(aide||"")}"${req?" required":""}>${esc(v)}</textarea></div>`
+    ch[k]=col==="creneaux"&&k==="quiPour"?"":type==="textarea"?`<div class="champ"><label for="${idc}">${lab}</label><textarea id="${idc}" rows="${col==="consignes"?16:3}" placeholder="${esc(aide||"")}"${req?" required":""}>${esc(v)}</textarea></div>`
     :type==="choix"?`<div class="champ"><span class="l">${lab}</span><div class="choix" role="radiogroup">${Object.entries(opts).map(([a,b])=>`<label><input type="radio" name="${idc}" value="${a}"${a===v?" checked":""}><span>${k==="type"&&TYPES[a]?`<span class="pastille" style="--c:var(--t-${a})"></span>`:""}${b}</span></label>`).join("")}</div></div>`
+    :type==="pourqui"?widgetQui(v)
     :type==="checkbox"?`<label class="case"><input type="checkbox" id="${idc}"${v?" checked":""}>${lab}</label>`
     :type==="lieu"?`<div class="champ"><label for="${idc}">${lab}</label><select id="${idc}"><option value="">Aucun pour l'instant</option>${S.lieux.map(l=>`<option value="${esc(l.id)}"${l.id===v?" selected":""}>${esc(l.nom)}</option>`).join("")}</select></div>`
     :type==="photo"?`<div class="champ"><span class="l">${lab}</span><div class="depot">${o.photo?`<img class="apercu" id="apercu" src="${esc(photoUrl(o.photo))}" alt="Photo actuelle">`:`<img class="apercu" id="apercu" alt="" hidden>`}
