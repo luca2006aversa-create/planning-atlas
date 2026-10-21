@@ -82,3 +82,12 @@ create policy "membres suppriment des photos" on storage.objects for delete to a
 -- LE CODE DU GROUPE : remplace CHANGE-MOI avant de lancer (ou plus tard avec la même ligne)
 insert into public.reglages (cle, valeur) values ('code_groupe', 'CHANGE-MOI')
   on conflict (cle) do update set valeur = excluded.valeur;
+
+-- QUESTIONNAIRE PUBLIC (page questionnaire.html) : une personne sans code du groupe peut
+-- LIRE les questions et ENVOYER une réponse, rien d'autre (elle ne voit ni les réponses des autres ni le reste).
+drop policy if exists "tous lisent les questions" on public.docs;
+drop policy if exists "tous envoient une reponse" on public.docs;
+create policy "tous lisent les questions" on public.docs for select to authenticated
+  using (col = 'questions');
+create policy "tous envoient une reponse" on public.docs for insert to authenticated
+  with check (col = 'reponses' and pg_column_size(data) < 20000);

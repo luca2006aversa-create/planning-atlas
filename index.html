@@ -362,7 +362,7 @@ const ONGLETS=[["auj","Aujourd'hui","Jour","i-auj"],["semaine","Semaine","Semain
 const FAB={auj:"Créneau",semaine:"Créneau",taches:"Tâche",mur:"Note ou photo",consignes:"Modifier"};
 const QTYPES={fermee:"Fermée : oui / non / autre",ouverte:"Ouverte : réponse écrite"};
 const COULEURS=["#c43d2b","#f2b705","#2f7a4f","#2d6a9f","#7b4fa6","#17302a"];
-const LIEN_Q=location.origin+location.pathname+"#questionnaire";
+const lienQ=()=>new URL("questionnaire.html?site="+S.site,location.href).href;
 /* fond de carte : rendu OSM de SiteScope, projection équirectangulaire (comme presentations/moteur/carte.js) */
 
 const FORMS={
@@ -519,7 +519,7 @@ const VUES={
     const jours=[...Array(7)].map((_,k)=>plus(l,k));
     const puces=`<div class="puces" role="group" aria-label="Type">${[["","Tous"],...Object.entries(TYPES)].map(([k,v])=>`<button data-type="${k}" aria-pressed="${S.type===k}">${k?`<span class="pastille" style="--c:var(--t-${k})"></span>`:""}${v}</button>`).join("")}</div>`;
     return `<div class="tete"><h1>${nom}<small>du ${esc(fmt(l,{day:"numeric",month:"long"}))} au ${esc(fmt(plus(l,6),{day:"numeric",month:"long"}))}</small></h1>
-      <div class="outils"><button class="btn ico" data-sem="-1" aria-label="Semaine précédente">${ic("i-g")}</button>${S.semaine?`<button class="btn" data-sem="0">Aujourd'hui</button>`:""}<button class="btn ico" data-sem="1" aria-label="Semaine suivante">${ic("i-d")}</button></div></div>
+      <div class="outils"><button class="btn" data-export="planning">Exporter</button><button class="btn ico" data-sem="-1" aria-label="Semaine précédente">${ic("i-g")}</button>${S.semaine?`<button class="btn" data-sem="0">Aujourd'hui</button>`:""}<button class="btn ico" data-sem="1" aria-label="Semaine suivante">${ic("i-d")}</button></div></div>
     ${puces}
     <div class="mobile-sem">
       <div class="bande">${jours.map(s=>`<button data-jour="${s}" aria-pressed="${s===S.jour}" class="${s===j?"auj":""} ${du(s).length?"a":""}" aria-label="${esc(fmt(s,{weekday:"long",day:"numeric"}))}"><small>${esc(fmt(s,{weekday:"short"}).replace(".",""))}</small><b>${parse(s).getDate()}</b><i></i></button>`).join("")}</div>
@@ -564,7 +564,9 @@ const VUES={
       ${S.ecrire&&db?`<div class="compo"><label for="qtexte" style="font-weight:700">Nouvelle question</label><textarea id="qtexte" rows="2" placeholder="ex. Depuis combien de temps habitez-vous sur le banc ?"></textarea>
         <div class="choix" role="radiogroup">${Object.entries(QTYPES).map(([k,v],i)=>`<label><input type="radio" name="qtype" id="qtype_${k}" value="${k}"${i?"":" checked"}><span>${v}</span></label>`).join("")}</div>
         <div><button class="btn jaune" data-qajout="1">${ic("i-plus",14)}Ajouter au questionnaire</button></div></div>`:""}
-      <div class="lien"><span>Lien direct vers le questionnaire seul :</span><code>${esc(LIEN_Q)}</code><button class="btn" data-copier="${esc(LIEN_Q)}">Copier</button></div>`;
+      <div class="compo" style="margin:0"><button class="btn" data-export="questions">Exporter les questions en PDF (à imprimer)</button></div>
+      <div class="lien"><span>Lien à donner pour répondre (questions seules) :</span><code>${esc(lienQ())}</code><button class="btn" data-copier="${esc(lienQ())}">Copier</button></div>
+      <p class="qui">Ce lien ouvre une page avec seulement les questions de ${esc(SITES[S.site].nom)} : pas de code du groupe, pas de compte. Donne-le tel quel aux personnes interrogées.</p>`;
     }else if(S.qmode==="resultats"){
       const reps=[...S.reponses].sort((a,b)=>(b.quand||0)-(a.quand||0));
       corps=qs.length?qs.map((q,i)=>{
@@ -898,5 +900,6 @@ $("#themeBtn").addEventListener("click",()=>{const t=sombre()?"light":"dark";doc
 function etat(ok,t){const e=$("#etat");e.classList.toggle("ok",ok);e.querySelector("span").textContent=t}
 </script>
 <script src="extras.js"></script>
+<script src="exports.js"></script>
 <script src="sb.js"></script>
 </body></html>
