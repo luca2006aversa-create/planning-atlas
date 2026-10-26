@@ -844,7 +844,7 @@ $("#formulaire").addEventListener("click",async ev=>{
     if(!edit.suppr){edit.suppr=true;b.textContent="Confirmer la suppression";return}
     try{await db.collection(edit.col).doc(edit.id).delete();
       if(edit.o.photo&&assets)assets.delete(edit.o.photo).catch(()=>{});
-      if(edit.o.chemin)SB.storage.from("documents").remove([edit.o.chemin]).catch(()=>{});
+      if(edit.o.chemin)fiSupprimer(edit.o);
       $("#dlg").close();toast("Supprimé")}catch(e){refus(e)}
   }
 });
