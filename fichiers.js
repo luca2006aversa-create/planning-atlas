@@ -1,0 +1,86 @@
+/* Fichiers : la bibliothèque du groupe (PDF, documents, tableurs, photos, cartes…), par site.
+   Les fichiers sont dans le stockage Supabase (dossier privé « documents », réservé aux membres) ;
+   la liste (nom, thème, note, lieu) est dans la collection « fichiers ». */
+
+COLS.push("fichiers"); S.fichiers = [];
+ONGLETS.splice(7, 0, ["fichiers", "Fichiers", null, "i-fich"]);
+FAB.fichiers = "";
+FORMS.fichiers = { nom: "Fichier", champs: [
+  ["nom", "Nom du fichier", "text", 1], ["theme", "Thème", "text", 0, null, "ex. Crues, Agriculture, Cartes, Entretiens"],
+  ["lieu", "Lieu associé", "lieu"], ["note", "Description", "textarea", 0, null, "De quoi s'agit-il, d'où vient-il, à quoi il sert…"]] };
+document.querySelector("svg defs, svg")?.insertAdjacentHTML("beforeend",
+  `<symbol id="i-fich" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>`);
+const fiCss = document.createElement("style");
+fiCss.textContent = `.fichiers{display:grid;gap:8px}
+.fich{display:grid;grid-template-columns:56px 1fr auto;gap:12px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px;min-width:0}
+.fich .vign{width:56px;height:56px;border-radius:8px;background:var(--sunk);display:grid;place-items:center;font:800 .8rem var(--display);letter-spacing:.04em;color:var(--muted);overflow:hidden}
+.fich .vign img{width:100%;height:100%;object-fit:cover}
+.fich .ouvrir{border:0;background:transparent;text-align:left;padding:0;display:grid;gap:2px;min-width:0;color:inherit;cursor:pointer}
+.fich .nom{font-weight:700;overflow-wrap:anywhere;line-height:1.3}
+.fich .meta{font-size:.8rem;color:var(--muted);display:flex;flex-wrap:wrap;gap:2px 10px}
+.fich .note{font-size:.85rem;color:var(--muted);overflow-wrap:anywhere}
+.depose{border:2px dashed var(--line);border-radius:14px;padding:16px;text-align:center;display:grid;gap:8px;justify-items:center;background:var(--surface)}
+.depose.survol{border-color:var(--jaune);background:var(--sunk)}
+.quota{font-size:.8rem;color:var(--muted)}`;
+document.head.appendChild(fiCss);
+
+const FI_MAX = 50 * 1024 * 1024, fiLiens = new Map();
+const fiTaille = (n) => n >= 1048576 ? (n / 1048576).toFixed(n >= 10485760 ? 0 : 1).replace(".", ",") + " Mo" : Math.max(1, Math.round(n / 1024)) + " Ko";
+const fiExt = (f) => { const e = (String(f.nom || "").split(".").pop() || "").toUpperCase(); return e.length <= 4 ? e : "FICHIER"; };
+const fiImage = (f) => /^image\/(jpeg|png|webp|gif)/.test(f.type || "");
+const fiSur = (nom) => String(nom).normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^A-Za-z0-9._-]+/g, "_").slice(-80);
+async function fiUrl(chemin) {
+  const c = fiLiens.get(chemin); if (c && c.exp > Date.now() + 60000) return c.url;
+  const { data, error } = await SB.storage.from("documents").createSignedUrl(chemin, 3600); if (error) throw error;
+  fiLiens.set(chemin, { url: data.signedUrl, exp: Date.now() + 3600000 }); return data.signedUrl;
+}
+async function fiVignettes() {
+  const a = [...document.querySelectorAll("img[data-fpath]")].filter((i) => !i.src); if (!a.length) return;
+  const manque = [...new Set(a.map((i) => i.dataset.fpath).filter((p) => !fiLiens.has(p)))];
+  if (manque.length) { const { data } = await SB.storage.from("documents").createSignedUrls(manque, 3600); for (const r of data || []) if (r.signedUrl) fiLiens.set(r.path, { url: r.signedUrl, exp: Date.now() + 3600000 }); }
+  for (const i of a) { const c = fiLiens.get(i.dataset.fpath); if (c) i.src = c.url; }
+}
+function fiCarte(f) {
+  const lieu = nomLieu(f.lieu), c = fiLiens.get(f.chemin);
+  return `<div class="fich"><div class="vign">${fiImage(f) ? `<img data-fpath="${esc(f.chemin)}" alt=""${c ? ` src="${esc(c.url)}"` : ""} loading="lazy">` : esc(fiExt(f))}</div>
+    <button class="ouvrir" data-fouvrir="${esc(f.id)}"><span class="nom">${esc(f.nom)}</span>
+      <span class="meta"><span>${esc(fiExt(f))} · ${esc(fiTaille(f.taille || 0))}</span>${lieu ? `<span>${ic("i-lieu", 12)} ${esc(lieu)}</span>` : ""}${f.theme ? `<span class="etiquette">${esc(f.theme)}</span>` : ""}<span>${auteur(f)} · ${esc(quand(f.cree))}</span></span>
+      ${f.note ? `<span class="note">${esc(f.note)}</span>` : ""}</button>
+    ${S.ecrire ? `<button class="btn ico" data-ouvrir="fichiers" data-id="${esc(f.id)}" aria-label="Modifier">✎</button>` : ""}</div>`;
+}
+VUES.fichiers = () => {
+  const themes = [...new Set(S.fichiers.map((m) => m.theme).filter(Boolean))].sort();
+  if (S.theme && !themes.includes(S.theme)) S.theme = "";
+  const l = S.fichiers.filter((x) => cherche(x, "nom", "note", "theme") && (!S.theme || x.theme === S.theme)).sort((a, b) => (b.cree || 0) - (a.cree || 0));
+  const total = S.fichiers.reduce((s, x) => s + (x.taille || 0), 0);
+  return `<div class="tete"><h1>Fichiers<small>PDF, documents, tableurs, photos : tout au même endroit</small></h1></div>
+  ${S.ecrire && db ? `<div class="depose" id="depose"><span>Glisse des fichiers ici, ou</span><label class="btn jaune" style="cursor:pointer">${ic("i-plus", 14)}Ajouter des fichiers<input type="file" id="fiFichiers" multiple hidden></label><span class="quota">50 Mo maximum par fichier · ${esc(fiTaille(total))} déjà déposés ici</span></div>` : ""}
+  ${themes.length ? `<div class="puces">${[["", "Tout"], ...themes.map((x) => [x, x])].map(([k, v]) => `<button data-theme="${esc(k)}" aria-pressed="${S.theme === k}">${esc(v)}</button>`).join("")}</div>` : ""}
+  ${l.length ? `<div class="fichiers">${l.map(fiCarte).join("")}</div>` : vide("Aucun fichier pour l'instant. Dépose un PDF, un tableur, une photo…")}`;
+};
+async function fiEnvoyer(liste) {
+  const fichiers = [...liste]; let ok = 0;
+  for (const [i, f] of fichiers.entries()) {
+    if (f.size > FI_MAX) { toast(`« ${f.name} » dépasse 50 Mo : trop lourd.`); continue; }
+    toast(`Envoi ${i + 1}/${fichiers.length} : ${f.name}…`);
+    const chemin = `${S.site}/${nouvelId()}-${fiSur(f.name)}`;
+    const { error } = await SB.storage.from("documents").upload(chemin, f, { contentType: f.type || "application/octet-stream", cacheControl: "3600" });
+    if (error) { toast(/bucket/i.test(error.message) ? "Le dossier de fichiers n'est pas encore activé : lance le SQL « documents » dans Supabase." : "Envoi impossible : " + error.message); return; }
+    const now = Date.now();
+    try { await db.collection("fichiers").doc(nouvelId()).set({ nom: f.name, chemin, taille: f.size, type: f.type || "", theme: S.theme || "", note: "", par: S.moi, auteur: S.moi, cree: now, maj: now }); ok++; }
+    catch (e) { await SB.storage.from("documents").remove([chemin]).catch(() => {}); refus(e); return; }
+  }
+  if (ok) toast(ok === 1 ? "Fichier ajouté" : `${ok} fichiers ajoutés`);
+}
+document.addEventListener("change", (e) => { if (e.target.id === "fiFichiers" && e.target.files.length) { fiEnvoyer(e.target.files); e.target.value = ""; } });
+document.addEventListener("dragover", (e) => { const z = e.target.closest && e.target.closest("#depose"); if (z) { e.preventDefault(); z.classList.add("survol"); } });
+document.addEventListener("dragleave", (e) => { const z = e.target.closest && e.target.closest("#depose"); if (z) z.classList.remove("survol"); });
+document.addEventListener("drop", (e) => { const z = e.target.closest && e.target.closest("#depose"); if (!z) return; e.preventDefault(); z.classList.remove("survol"); if (e.dataTransfer.files.length && S.ecrire && db) fiEnvoyer(e.dataTransfer.files); });
+document.addEventListener("click", async (e) => {
+  const b = e.target.closest("[data-fouvrir]"); if (!b) return;
+  const f = S.fichiers.find((x) => x.id === b.dataset.fouvrir); if (!f) return;
+  const w = window.open("", "_blank");
+  try { const u = await fiUrl(f.chemin); if (w) w.location = u; else location.href = u; }
+  catch (x) { if (w) w.close(); toast("Impossible d'ouvrir ce fichier."); }
+});
+new MutationObserver(() => { if (S.vue === "fichiers") fiVignettes(); }).observe(document.getElementById("vue"), { childList: true });

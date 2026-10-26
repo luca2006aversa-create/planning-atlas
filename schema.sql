@@ -91,3 +91,18 @@ create policy "tous lisent les questions" on public.docs for select to authentic
   using (col = 'questions');
 create policy "tous envoient une reponse" on public.docs for insert to authenticated
   with check (col = 'reponses' and pg_column_size(data) < 20000);
+
+-- FICHIERS (onglet « Fichiers ») : dossier privé « documents » pour PDF, documents, tableurs, photos…
+-- 50 Mo maximum par fichier (plafond du forfait gratuit) ; seuls les membres lisent, ajoutent et suppriment.
+insert into storage.buckets (id, name, public, file_size_limit)
+  values ('documents', 'documents', false, 52428800)
+  on conflict (id) do update set file_size_limit = excluded.file_size_limit;
+drop policy if exists "membres voient les documents" on storage.objects;
+drop policy if exists "membres envoient des documents" on storage.objects;
+drop policy if exists "membres suppriment des documents" on storage.objects;
+create policy "membres voient les documents" on storage.objects for select to authenticated
+  using (bucket_id = 'documents' and public.est_membre());
+create policy "membres envoient des documents" on storage.objects for insert to authenticated
+  with check (bucket_id = 'documents' and public.est_membre());
+create policy "membres suppriment des documents" on storage.objects for delete to authenticated
+  using (bucket_id = 'documents' and public.est_membre());
