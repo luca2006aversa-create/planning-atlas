@@ -48,6 +48,20 @@ function fiCarte(f) {
       ${f.note ? `<span class="note">${esc(f.note)}</span>` : ""}</button>
     ${S.ecrire ? `<button class="btn ico" data-ouvrir="fichiers" data-id="${esc(f.id)}" aria-label="Modifier">✎</button>` : ""}</div>`;
 }
+/* Dossier privé sur le NAS : deux liens enregistrés pour le site (dépôt = envoi seulement, dossier = lecture). Le site ne se connecte jamais au NAS. */
+const lienOk = (u) => { try { const x = new URL(u); return x.protocol === "https:" || x.protocol === "http:"; } catch (e) { return false; } };
+const nasCarte = () => { const r = reglageSite(), d = r.nas_depot, v = r.nas_voir;
+  return `<div class="depose" style="text-align:left;justify-items:stretch"><b>Dossier privé sur le NAS</b>
+  ${d || v ? `<div style="display:flex;flex-wrap:wrap;gap:8px">${d ? `<a class="btn jaune" href="${esc(d)}" target="_blank" rel="noopener noreferrer">Déposer sur le NAS</a>` : ""}${v ? `<a class="btn" href="${esc(v)}" target="_blank" rel="noopener noreferrer">Ouvrir le dossier du NAS</a>` : ""}</div>` : `<span class="quota">Aucun lien enregistré pour ce site.</span>`}
+  ${S.ecrire && db ? `<div><button class="btn" data-nasconf="1">${d || v ? "Changer les liens" : "Enregistrer les liens du NAS"}</button></div>` : ""}</div>`; };
+document.addEventListener("click", async (e) => {
+  if (!e.target.closest("[data-nasconf]")) return;
+  const r = reglageSite(), a = prompt("Lien de DÉPÔT du NAS (envoi seulement). Laisse vide pour l'effacer :", r.nas_depot || "");
+  if (a === null) return; const v = prompt("Lien du DOSSIER du NAS (lecture). Laisse vide pour l'effacer :", r.nas_voir || ""); if (v === null) return;
+  if ((a.trim() && !lienOk(a.trim())) || (v.trim() && !lienOk(v.trim()))) return toast("Ces liens doivent commencer par https://");
+  const { id, ...reste } = r;
+  try { await db.collection("sites").doc(S.site).set({ ...reste, nas_depot: a.trim(), nas_voir: v.trim(), par: S.moi, maj: Date.now() }); toast("Liens du NAS enregistrés"); } catch (x) { refus(x); }
+});
 VUES.fichiers = () => {
   const themes = [...new Set(S.fichiers.map((m) => m.theme).filter(Boolean))].sort();
   if (S.theme && !themes.includes(S.theme)) S.theme = "";
@@ -55,6 +69,7 @@ VUES.fichiers = () => {
   const total = S.fichiers.reduce((s, x) => s + (x.taille || 0), 0);
   return `<div class="tete"><h1>Fichiers<small>PDF, documents, tableurs, photos : tout au même endroit</small></h1></div>
   ${S.ecrire && db ? `<div class="depose" id="depose"><span>Glisse des fichiers ici, ou</span><label class="btn jaune" style="cursor:pointer">${ic("i-plus", 14)}Ajouter des fichiers<input type="file" id="fiFichiers" multiple hidden></label><span class="quota">50 Mo maximum par fichier · ${esc(fiTaille(total))} déjà déposés ici</span></div>` : ""}
+  ${nasCarte()}
   ${themes.length ? `<div class="puces">${[["", "Tout"], ...themes.map((x) => [x, x])].map(([k, v]) => `<button data-theme="${esc(k)}" aria-pressed="${S.theme === k}">${esc(v)}</button>`).join("")}</div>` : ""}
   ${l.length ? `<div class="fichiers">${l.map(fiCarte).join("")}</div>` : vide("Aucun fichier pour l'instant. Dépose un PDF, un tableur, une photo…")}`;
 };

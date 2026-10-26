@@ -413,7 +413,7 @@ async function changerSite(k){
   appliquerSite();if(carte)carte.setView(siteCentre(),siteZoom());render();
   if(db&&S.moi&&monPseudo())db.collection("membres").doc(S.moi).update({site:k}).catch(()=>{});
 }
-document.addEventListener("click",e=>{if(e.target.closest("[data-reset-site]")&&db){db.collection("sites").doc(S.site).delete().then(()=>{if(carte)carte.setView(SITES[S.site].centre,SITES[S.site].zoom);toast("Vue d'origine rétablie")}).catch(refus);return}const b=e.target.closest("[data-site]");if(b)changerSite(b.dataset.site);
+document.addEventListener("click",e=>{if(e.target.closest("[data-reset-site]")&&db){(()=>{const {id,lat,lon,zoom,...reste}=reglageSite();return Object.keys(reste).length>2?db.collection("sites").doc(S.site).set(reste):db.collection("sites").doc(S.site).delete()})().then(()=>{if(carte)carte.setView(SITES[S.site].centre,SITES[S.site].zoom);toast("Vue d'origine rétablie")}).catch(refus);return}const b=e.target.closest("[data-site]");if(b)changerSite(b.dataset.site);
   if(e.target.closest("[data-centrer-site]")&&carte&&db){if(!confirm("Enregistrer cette vue comme vue de départ de "+SITES[S.site].nom+" pour tout le groupe ? (Tu pourras revenir à la vue d’origine avec le bouton « Rétablir la vue d’origine ».)"))return;const c=carte.getCenter();db.collection("sites").doc(S.site).set({lat:+c.lat.toFixed(5),lon:+c.lng.toFixed(5),zoom:carte.getZoom(),par:S.moi,maj:Date.now()}).then(()=>toast("Vue de départ de "+SITES[S.site].nom+" enregistrée")).catch(refus)}});
 const COLS=["creneaux","taches","mur","lieux","traces","traits","questions","reponses","membres"];
 const S={creneaux:[],taches:[],mur:[],lieux:[],traces:[],traits:[],questions:[],reponses:[],membres:[],consignes:null,
