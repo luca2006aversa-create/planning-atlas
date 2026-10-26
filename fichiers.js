@@ -25,8 +25,9 @@ fiCss.textContent = `.fichiers{display:grid;gap:8px}
 document.head.appendChild(fiCss);
 
 const HUB = (typeof CONFIG !== "undefined" && CONFIG.hub ? String(CONFIG.hub).replace(/\/$/, "") : "");
-const FI_MAX_SB = 50 * 1024 * 1024, FI_MAX_HUB = ((typeof CONFIG !== "undefined" && CONFIG.hubMaxMo) || 4096) * 1048576, fiLiens = new Map();
+const FI_MAX_SB = 50 * 1024 * 1024, FI_MAX_HUB = ((typeof CONFIG !== "undefined" && CONFIG.hubMaxMo) || 100) * 1048576, fiLiens = new Map();
 const fiMax = () => HUB ? FI_MAX_HUB : FI_MAX_SB;
+const fiMaxTxt = () => fiMax() >= 1073741824 ? Math.round(fiMax() / 1073741824) + " Go" : Math.round(fiMax() / 1048576) + " Mo";
 const fiJeton = async () => { const { data } = await SB.auth.getSession(); return data.session ? data.session.access_token : ""; };
 const fiSurHub = (f) => f && f.stock === "hub";
 async function fiSignerHub(chemins) {
@@ -93,7 +94,7 @@ VUES.fichiers = () => {
   const l = S.fichiers.filter((x) => cherche(x, "nom", "note", "theme") && (!S.theme || x.theme === S.theme)).sort((a, b) => (b.cree || 0) - (a.cree || 0));
   const total = S.fichiers.reduce((s, x) => s + (x.taille || 0), 0);
   return `<div class="tete"><h1>Fichiers<small>PDF, documents, tableurs, photos : tout au même endroit</small></h1></div>
-  ${S.ecrire && db ? `<div class="depose" id="depose"><span>Glisse des fichiers ici, ou</span><label class="btn jaune" style="cursor:pointer">${ic("i-plus", 14)}Ajouter des fichiers<input type="file" id="fiFichiers" multiple hidden></label><span class="quota">${HUB ? "Stockage sur le NAS, " + Math.round(fiMax() / 1073741824) + " Go maximum par fichier" : "50 Mo maximum par fichier"} · ${esc(fiTaille(total))} déjà déposés ici</span></div>` : ""}
+  ${S.ecrire && db ? `<div class="depose" id="depose"><span>Glisse des fichiers ici, ou</span><label class="btn jaune" style="cursor:pointer">${ic("i-plus", 14)}Ajouter des fichiers<input type="file" id="fiFichiers" multiple hidden></label><span class="quota">${HUB ? "Stockage sur le NAS, " + fiMaxTxt() + " maximum par fichier" : "50 Mo maximum par fichier"} · ${esc(fiTaille(total))} déjà déposés ici</span></div>` : ""}
   ${nasCarte()}
   ${themes.length ? `<div class="puces">${[["", "Tout"], ...themes.map((x) => [x, x])].map(([k, v]) => `<button data-theme="${esc(k)}" aria-pressed="${S.theme === k}">${esc(v)}</button>`).join("")}</div>` : ""}
   ${l.length ? `<div class="fichiers">${l.map(fiCarte).join("")}</div>` : vide("Aucun fichier pour l'instant. Dépose un PDF, un tableur, une photo…")}`;
@@ -101,7 +102,7 @@ VUES.fichiers = () => {
 async function fiEnvoyer(liste) {
   const fichiers = [...liste]; let ok = 0;
   for (const [i, f] of fichiers.entries()) {
-    if (f.size > fiMax()) { toast(`« ${f.name} » dépasse ${HUB ? Math.round(fiMax() / 1073741824) + " Go" : "50 Mo"} : trop lourd.`); continue; }
+    if (f.size > fiMax()) { toast(`« ${f.name} » dépasse ${HUB ? fiMaxTxt() : "50 Mo"} : trop lourd.`); continue; }
     toast(`Envoi ${i + 1}/${fichiers.length} : ${f.name}…`);
     let chemin, taille = f.size;
     if (HUB) {
