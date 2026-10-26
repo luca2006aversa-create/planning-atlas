@@ -361,9 +361,10 @@ const ORDRE=["afaire","encours","fait"];
 const ONGLETS=[["auj","Aujourd'hui","Jour","i-auj"],["semaine","Semaine","Semaine","i-sem"],["taches","Tâches","Tâches","i-tac"],["carte","Carte","Carte","i-carte"],["mur","Mur","Mur","i-mur"],["questionnaire","Questionnaire","Enquête","i-q"],["consignes","Consignes",null,"i-con"]];
 const FAB={auj:"Créneau",semaine:"Créneau",taches:"Tâche",mur:"Note ou photo",consignes:"Modifier"};
 const QL={
-  fr:{oui:"Oui",non:"Non",autre:"Autre",prec:"Préciser (facultatif)",lieu:"Lieu de l'entretien",lieuEx:"ex. Marché du banc",profil:"Profil (facultatif)",profilEx:"ex. agricultrice, ~50 ans",rep:"Réponse",ok:"Enregistrer cette fiche"},
-  vi:{oui:"Có",non:"Không",autre:"Khác",prec:"Nói rõ thêm (không bắt buộc)",lieu:"Địa điểm phỏng vấn",lieuEx:"vd. chợ",profil:"Người trả lời (không bắt buộc)",profilEx:"vd. nông dân, khoảng 50 tuổi",rep:"Câu trả lời",ok:"Lưu phiếu này"}};
+  fr:{oui:"Oui",non:"Non",autre:"Autre",prec:"Préciser (facultatif)",lieu:"Lieu de l'entretien",lieuEx:"ex. Marché du banc",profil:"Profil (facultatif)",profilEx:"ex. agricultrice, ~50 ans",rep:"Réponse",dicter:"Dicter la réponse (micro)",ok:"Enregistrer cette fiche"},
+  vi:{oui:"Có",non:"Không",autre:"Khác",prec:"Nói rõ thêm (không bắt buộc)",lieu:"Địa điểm phỏng vấn",lieuEx:"vd. chợ",profil:"Người trả lời (không bắt buộc)",profilEx:"vd. nông dân, khoảng 50 tuổi",rep:"Câu trả lời",dicter:"Nói để ghi lại câu trả lời (micro)",ok:"Lưu phiếu này"}};
 
+const microLang=()=>S.langQ;
 const qt=q=>S.langQ==="vi"&&q.texte_vi?q.texte_vi:q.texte;
 const QTYPES={fermee:"Fermée : oui / non / autre",ouverte:"Ouverte : réponse écrite"};
 const COULEURS=["#c43d2b","#f2b705","#2f7a4f","#2d6a9f","#7b4fa6","#17302a"];
@@ -586,8 +587,8 @@ const VUES={
     }else{
       corps=qs.length?`<form class="feuille" id="fiche"><div class="duo"><div class="champ"><label for="r_lieu">${QL[S.langQ].lieu}</label><input type="text" id="r_lieu" placeholder="${QL[S.langQ].lieuEx}"></div>
         <div class="champ"><label for="r_profil">${QL[S.langQ].profil}</label><input type="text" id="r_profil" placeholder="${QL[S.langQ].profilEx}"></div></div>
-        ${qs.map((q,i)=>`<fieldset><legend lang="${S.langQ}">${i+1}. ${esc(qt(q))}</legend>${q.type==="ouverte"?`<textarea id="r_${esc(q.id)}" rows="3" aria-label="${QL[S.langQ].rep}"></textarea>`
-          :`<div class="choix">${["oui","non","autre"].map(k=>`<label><input type="radio" name="r_${esc(q.id)}" id="r_${esc(q.id)}_${k}" value="${k}"><span>${QL[S.langQ][k]}</span></label>`).join("")}</div><input type="text" id="ra_${esc(q.id)}" placeholder="${QL[S.langQ].prec}">`}</fieldset>`).join("")}
+        ${qs.map((q,i)=>`<fieldset><legend lang="${S.langQ}">${i+1}. ${esc(qt(q))}</legend>${q.type==="ouverte"?avecMicro(`<textarea id="r_${esc(q.id)}" rows="3" aria-label="${QL[S.langQ].rep}"></textarea>`,"r_"+q.id,QL[S.langQ].dicter)
+          :`<div class="choix">${["oui","non","autre"].map(k=>`<label><input type="radio" name="r_${esc(q.id)}" id="r_${esc(q.id)}_${k}" value="${k}"><span>${QL[S.langQ][k]}</span></label>`).join("")}</div>${avecMicro(`<input type="text" id="ra_${esc(q.id)}" placeholder="${QL[S.langQ].prec}">`,"ra_"+q.id,QL[S.langQ].dicter)}`}</fieldset>`).join("")}
         <div><button class="btn jaune">${QL[S.langQ].ok}</button></div></form>`:`<p class="vide">Aucune question pour l'instant. Va dans « Questions » pour les écrire.</p>`;
     }
     return `<div class="tete"><h1>Questionnaire<small>${S.reponses.length} fiche${S.reponses.length>1?"s":""} remplie${S.reponses.length>1?"s":""}</small></h1>${seg}</div>
@@ -930,6 +931,7 @@ matchMedia("(prefers-color-scheme: dark)").addEventListener("change",majTheme);
 $("#themeBtn").addEventListener("click",()=>{const t=sombre()?"light":"dark";document.documentElement.dataset.theme=t;try{localStorage.setItem("theme",t)}catch(e){}majTheme()});
 function etat(ok,t){const e=$("#etat");e.classList.toggle("ok",ok);e.querySelector("span").textContent=t}
 </script>
+<script src="micro.js"></script>
 <script src="extras.js"></script>
 <script src="exports.js"></script>
 <script src="sb.js"></script>

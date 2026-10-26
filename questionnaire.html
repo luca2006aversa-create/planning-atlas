@@ -40,6 +40,7 @@ input:focus-visible,textarea:focus-visible,button:focus-visible{outline:3px soli
 .btn.autre{background:transparent;color:var(--ink);border:1px solid var(--line)}
 .btn:disabled{opacity:.6}
 .lg{margin-left:auto;display:flex;gap:4px;background:#ffffff1f;border-radius:999px;padding:3px}.lg button{border:0;background:transparent;color:var(--on-deep);font:700 .8rem var(--body);padding:6px 11px;border-radius:999px;cursor:pointer}.lg button[aria-pressed="true"]{background:var(--on-deep);color:var(--deep)}
+.dicter{position:relative;display:grid}.dicter textarea,.dicter input{padding-right:56px}
 .merci{text-align:center;display:grid;gap:12px;padding:28px 16px}
 .merci .coche{font-size:2.4rem}
 .err{color:var(--alerte);font-weight:700}
@@ -49,16 +50,18 @@ input:focus-visible,textarea:focus-visible,button:focus-visible{outline:3px soli
 <header><div class="in"><img src="logo2.svg" alt=""><div><b id="titre">Questionnaire</b><small id="site">Workshop S5</small></div><div class="lg" id="langues"></div></div></header>
 <main id="m"><p class="muted">Chargement…</p></main>
 <script src="vendor/supabase.js"></script>
+<script src="micro.js"></script>
 <script src="config.js"></script>
 <script>
 const SITES={hanoi:"Hanoï · Bãi Giữa",tasung:"Tà Sung"};
 const TXT={
-  fr:{titre:"Questionnaire",h1:"Quelques questions",intro:"Réponds comme tu veux ; tu peux laisser une question vide. Aucun nom n'est demandé.",lieu:"Lieu (facultatif)",profil:"Qui es-tu ? (facultatif : métier, âge approximatif…)",oui:"Oui",non:"Non",autre:"Autre",prec:"Préciser (facultatif)",envoyer:"Envoyer mes réponses",envoi:"Envoi…",merci:"Merci !",enreg:"Tes réponses sont enregistrées.",encore:"Remplir pour une autre personne",une:"Réponds à au moins une question.",echec:"L'envoi a échoué, réessaie dans un instant.",vide:"Aucune question n'est encore publiée pour ce site.",indispo:"Le questionnaire n'est pas disponible pour le moment.",charge:"Chargement…"},
-  vi:{titre:"Phiếu khảo sát",h1:"Vài câu hỏi",intro:"Ông/Bà cứ trả lời tùy ý, có thể bỏ trống câu nào cũng được. Không cần ghi tên.",lieu:"Địa điểm (không bắt buộc)",profil:"Ông/Bà là ai? (không bắt buộc: nghề nghiệp, tuổi ước chừng…)",oui:"Có",non:"Không",autre:"Khác",prec:"Nói rõ thêm (không bắt buộc)",envoyer:"Gửi câu trả lời",envoi:"Đang gửi…",merci:"Cảm ơn!",enreg:"Câu trả lời của Ông/Bà đã được ghi lại.",encore:"Điền cho người khác",une:"Xin trả lời ít nhất một câu hỏi.",echec:"Gửi không được, xin thử lại sau ít phút.",vide:"Chưa có câu hỏi nào cho địa điểm này.",indispo:"Hiện chưa mở được phiếu khảo sát.",charge:"Đang tải…"}};
+  fr:{titre:"Questionnaire",h1:"Quelques questions",intro:"Réponds comme tu veux ; tu peux laisser une question vide. Aucun nom n'est demandé.",lieu:"Lieu (facultatif)",profil:"Qui es-tu ? (facultatif : métier, âge approximatif…)",oui:"Oui",non:"Non",autre:"Autre",prec:"Préciser (facultatif)",envoyer:"Envoyer mes réponses",envoi:"Envoi…",merci:"Merci !",enreg:"Tes réponses sont enregistrées.",encore:"Remplir pour une autre personne",une:"Réponds à au moins une question.",echec:"L'envoi a échoué, réessaie dans un instant.",vide:"Aucune question n'est encore publiée pour ce site.",indispo:"Le questionnaire n'est pas disponible pour le moment.",charge:"Chargement…",dicter:"Dicter la réponse (micro)"},
+  vi:{titre:"Phiếu khảo sát",h1:"Vài câu hỏi",intro:"Ông/Bà cứ trả lời tùy ý, có thể bỏ trống câu nào cũng được. Không cần ghi tên.",lieu:"Địa điểm (không bắt buộc)",profil:"Ông/Bà là ai? (không bắt buộc: nghề nghiệp, tuổi ước chừng…)",oui:"Có",non:"Không",autre:"Khác",prec:"Nói rõ thêm (không bắt buộc)",envoyer:"Gửi câu trả lời",envoi:"Đang gửi…",merci:"Cảm ơn!",enreg:"Câu trả lời của Ông/Bà đã được ghi lại.",encore:"Điền cho người khác",une:"Xin trả lời ít nhất một câu hỏi.",echec:"Gửi không được, xin thử lại sau ít phút.",vide:"Chưa có câu hỏi nào cho địa điểm này.",indispo:"Hiện chưa mở được phiếu khảo sát.",charge:"Đang tải…",dicter:"Nói để ghi lại câu trả lời (micro)"}};
 const P=new URLSearchParams(location.search),k=P.get("site"),site=SITES[k]?k:"hanoi";
 let lang=P.get("lang")==="vi"?"vi":"fr";
 try{if(!P.get("lang")&&localStorage.getItem("lang")==="vi")lang="vi"}catch(e){}
 const t=x=>TXT[lang][x];
+const microLang=()=>lang;
 const SB=supabase.createClient(CONFIG.url,CONFIG.cle),m=document.getElementById("m");
 const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 let qs=[],uid=null,fini=false;
@@ -70,7 +73,7 @@ function entete(){
 }
 document.getElementById("langues").addEventListener("click",e=>{const b=e.target.closest("[data-l]");if(!b||b.dataset.l===lang)return;
   const garde={};document.querySelectorAll("#f input,#f textarea").forEach(x=>{garde[x.id||x.name+"|"+x.value]=x.type==="radio"?x.checked:x.value});
-  lang=b.dataset.l;try{localStorage.setItem("lang",lang)}catch(x){}entete();if(!fini)formulaire(garde);else merci()});
+  microArreter();lang=b.dataset.l;try{localStorage.setItem("lang",lang)}catch(x){}entete();if(!fini)formulaire(garde);else merci()});
 async function init(){
   entete();m.innerHTML='<p class="muted">'+t("charge")+'</p>';
   try{
@@ -88,8 +91,8 @@ function formulaire(garde){
   if(!qs.length){m.innerHTML='<h1>'+t("titre")+'</h1><p class="muted">'+t("vide")+'</p>';return}
   m.innerHTML='<div><h1>'+t("h1")+'</h1><p class="muted">'+t("intro")+'</p></div><form id="f"><div class="carte"><label class="champ">'+t("lieu")+'<input type="text" id="lieu" autocomplete="off"></label><label class="champ">'+t("profil")+'<input type="text" id="profil" autocomplete="off"></label></div>'+
   qs.map((q,i)=>'<fieldset class="carte"><legend>'+(i+1)+'. '+esc(qtexte(q))+'</legend>'+(q.type==="ouverte"
-    ?'<textarea id="r_'+esc(q.id)+'" aria-label="'+(i+1)+'"></textarea>'
-    :'<div class="choix">'+["oui","non","autre"].map(v=>'<label><input type="radio" name="r_'+esc(q.id)+'" value="'+v+'"><span>'+t(v)+'</span></label>').join("")+'</div><input type="text" id="ra_'+esc(q.id)+'" placeholder="'+t("prec")+'" aria-label="'+t("prec")+'">')+'</fieldset>').join("")+
+    ?avecMicro('<textarea id="r_'+esc(q.id)+'" aria-label="'+(i+1)+'"></textarea>','r_'+q.id,t('dicter'))
+    :'<div class="choix">'+["oui","non","autre"].map(v=>'<label><input type="radio" name="r_'+esc(q.id)+'" value="'+v+'"><span>'+t(v)+'</span></label>').join("")+'</div>'+avecMicro('<input type="text" id="ra_'+esc(q.id)+'" placeholder="'+t('prec')+'" aria-label="'+t('prec')+'">','ra_'+q.id,t('dicter')))+'</fieldset>').join("")+
   '<div><button class="btn" id="ok">'+t("envoyer")+'</button></div><p class="err" id="e" hidden></p></form>';
   if(garde)for(const x of document.querySelectorAll("#f input,#f textarea")){const c=x.id||x.name+"|"+x.value;if(c in garde){if(x.type==="radio")x.checked=garde[c];else x.value=garde[c]}}
   document.getElementById("f").addEventListener("submit",envoyer);
