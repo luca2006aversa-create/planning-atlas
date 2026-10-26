@@ -1,7 +1,7 @@
 // Appli hors ligne minimale : les pages du site d'abord depuis le réseau (pour avoir les mises à jour), sinon depuis la copie.
 // Les données (Supabase) et les tuiles de carte ne passent pas par ici.
-const CACHE = "atlas-v9";
-const COQUILLE = ["./", "index.html", "sb.js", "extras.js", "exports.js", "config.js", "manifest.webmanifest", "logo2.svg", "logo2-192.png"];
+const CACHE = "atlas-v10";
+const COQUILLE = ["./", "index.html", "sb.js", "extras.js", "exports.js", "config.js", "manifest.webmanifest", "logo2.svg", "logo2-192.png", "vendor/leaflet.js", "vendor/leaflet.css", "vendor/supabase.js"];
 self.addEventListener("install", (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(COQUILLE))); self.skipWaiting(); });
 self.addEventListener("activate", (e) => { e.waitUntil(caches.keys().then((k) => Promise.all(k.filter((n) => n !== CACHE).map((n) => caches.delete(n))))); self.clients.claim(); });
 self.addEventListener("fetch", (e) => {

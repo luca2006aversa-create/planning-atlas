@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Atlas">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="vendor/leaflet.css">
 <title>Planning Workshop Atlas</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -351,8 +351,8 @@ body{margin:0}img{max-width:100%}[hidden]{display:none!important}
   <p id="e_msg" class="retard" style="margin:0"></p>
   <button class="btn jaune">Entrer</button>
 </form></dialog>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="vendor/supabase.js"></script>
+<script src="vendor/leaflet.js"></script>
 <script src="config.js"></script>
 <script>
 const TYPES={terrain:"Terrain",atelier:"Atelier",rendu:"Rendu",reunion:"Réunion",autre:"Autre"};
@@ -411,8 +411,8 @@ async function changerSite(k){
   appliquerSite();if(carte)carte.setView(siteCentre(),siteZoom());render();
   if(db&&S.moi&&monPseudo())db.collection("membres").doc(S.moi).update({site:k}).catch(()=>{});
 }
-document.addEventListener("click",e=>{const b=e.target.closest("[data-site]");if(b)changerSite(b.dataset.site);
-  if(e.target.closest("[data-centrer-site]")&&carte&&db){const c=carte.getCenter();db.collection("sites").doc(S.site).set({lat:+c.lat.toFixed(5),lon:+c.lng.toFixed(5),zoom:carte.getZoom(),par:S.moi,maj:Date.now()}).then(()=>toast("Vue de départ de "+SITES[S.site].nom+" enregistrée")).catch(refus)}});
+document.addEventListener("click",e=>{if(e.target.closest("[data-reset-site]")&&db){db.collection("sites").doc(S.site).delete().then(()=>{if(carte)carte.setView(SITES[S.site].centre,SITES[S.site].zoom);toast("Vue d'origine rétablie")}).catch(refus);return}const b=e.target.closest("[data-site]");if(b)changerSite(b.dataset.site);
+  if(e.target.closest("[data-centrer-site]")&&carte&&db){if(!confirm("Enregistrer cette vue comme vue de départ de "+SITES[S.site].nom+" pour tout le groupe ? (Tu pourras revenir à la vue d’origine avec le bouton « Rétablir la vue d’origine ».)"))return;const c=carte.getCenter();db.collection("sites").doc(S.site).set({lat:+c.lat.toFixed(5),lon:+c.lng.toFixed(5),zoom:carte.getZoom(),par:S.moi,maj:Date.now()}).then(()=>toast("Vue de départ de "+SITES[S.site].nom+" enregistrée")).catch(refus)}});
 const COLS=["creneaux","taches","mur","lieux","traces","traits","questions","reponses","membres"];
 const S={creneaux:[],taches:[],mur:[],lieux:[],traces:[],traits:[],questions:[],reponses:[],membres:[],consignes:null,
   moi:null,ecrire:true,vue:"auj",semaine:0,jour:null,type:"",statut:"afaire",theme:"",filtre:"",moiSeul:false,
@@ -643,7 +643,7 @@ function barreCarte(){
   return `<div class="seg" role="group" aria-label="Outil">${o("main","Déplacer")}${S.ecrire?o("dessin","Dessiner")+o("gomme","Gomme")+o("lieu","+ Lieu"):""}</div>
     ${S.outil==="dessin"?`<div class="g" role="group" aria-label="Couleur">${COULEURS.map(c=>`<button class="nuance" style="--c:${c}" data-nuance="${c}" aria-pressed="${S.couleur===c}" aria-label="Couleur ${c}"></button>`).join("")}<button class="btn" data-annuler-trait="1">Annuler mon dernier trait</button></div>`:""}
     ${typeof gpsBoutons==="function"?gpsBoutons():""}${S.ecrire?`<span class="btn fichier">Importer un trajet GPX<input type="file" id="gpx" accept=".gpx,application/gpx+xml" multiple aria-label="Importer un trajet GPX"></span>`:""}
-    ${S.ecrire?`<button class="btn" data-centrer-site="1" title="Enregistre la vue actuelle comme vue de départ du site">Vue de départ du site ici</button>`:""}<div class="puces" role="group" aria-label="Calques">${[["traits","Dessins"],["traces","Trajets"],["photos","Photos"],["lieux","Lieux"]].map(([k,l])=>`<button data-calque="${k}" aria-pressed="${S.calques[k]}">${l}</button>`).join("")}</div>`;
+    ${S.ecrire?`<button class="btn" data-centrer-site="1" title="Enregistre la vue actuelle comme vue de départ du site">Vue de départ du site ici</button><button class="btn" data-reset-site="1">Rétablir la vue d'origine</button>`:""}<div class="puces" role="group" aria-label="Calques">${[["traits","Dessins"],["traces","Trajets"],["photos","Photos"],["lieux","Lieux"]].map(([k,l])=>`<button data-calque="${k}" aria-pressed="${S.calques[k]}">${l}</button>`).join("")}</div>`;
 }
 const ll=pts=>{const r=[];for(let i=0;i<pts.length;i+=2)r.push([pts[i+1],pts[i]]);return r};
 function majCarte(){
@@ -658,6 +658,7 @@ function majCarte(){
     L.marker([p.lat,p.lon],{icon:icone(`<span class="pin photo" title="${esc(p.texte||"Photo")}">${p.cap!=null?`<span class="cone" style="transform:rotate(${+p.cap}deg)"></span>`:""}<b></b></span>`)}).on("click",()=>ouvrir("mur",p.id)).addTo(couches.photos);
   if(S.calques.lieux)for(const l of S.lieux)if(l.lat!=null)
     L.marker([l.lat,l.lon],{icon:icone(`<span class="pin lieu"><i></i><span>${esc(l.nom)}</span></span>`)}).on("click",()=>ouvrir("lieux",l.id)).addTo(couches.lieux);
+  if(typeof trajet!=="undefined"&&trajet&&trajet.pts.length>=4)L.polyline(ll(trajet.pts),{color:"#e4572e",weight:6,opacity:.9,dashArray:"2 8"}).addTo(couches.traces);
   if(typeof maPos!=="undefined"&&maPos)L.circleMarker([maPos.lat,maPos.lon],{radius:9,color:"#fff",weight:3,fillColor:"#2d6a9f",fillOpacity:1}).addTo(couches.moi);
 }
 function centrer(){
@@ -691,6 +692,7 @@ function initCarte(){
   const fin=e=>{pointeurs.delete(e.pointerId);if(!traitEnCours)return;const t=traitEnCours;traitEnCours=null;if(t.length>1)enregistrerTrait(t);if(ligneEnCours){ligneEnCours.remove();ligneEnCours=null}};
   z.addEventListener("pointerup",fin);z.addEventListener("pointercancel",fin);
   setTimeout(()=>carte.invalidateSize(),50);
+  setTimeout(()=>{if(carte&&$("#carte")&&!document.querySelector(".leaflet-tile-loaded"))toast("Le fond de carte met du temps à charger. Vérifie ta connexion ou choisis un autre fond (en bas à gauche).")},9000);
 }
 async function enregistrerTrait(t){
   if(!db){toast("Connecte-toi pour dessiner.");return}

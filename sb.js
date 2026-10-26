@@ -118,8 +118,8 @@ function demarrerTrajet() {
   trajet = { id: nouvelId(), pts: [], debut: new Date().toISOString(), envoi: 0 };
   suivi = navigator.geolocation.watchPosition((p) => {
     const { longitude: lon, latitude: lat, accuracy } = p.coords;
-    maPos = { lon, lat, t: Date.now() };
-    if (accuracy <= 40) {
+    maPos = { lon, lat, t: Date.now(), prec: Math.round(accuracy) };
+    if (accuracy <= 60) {
       const q = trajet.pts, n = q.length;
       if (!n || Math.hypot((lon - q[n - 2]) * 111320 * Math.cos(lat * Math.PI / 180), (lat - q[n - 1]) * 110540) > 5) q.push(+lon.toFixed(6), +lat.toFixed(6));
       if (Date.now() - trajet.envoi > 20000) envoyerTrajet(false);
@@ -131,8 +131,8 @@ function demarrerTrajet() {
 }
 async function envoyerTrajet(fini) {
   if (!trajet) return;
-  trajet.envoi = Date.now();
   if (trajet.pts.length < 4) return;
+  trajet.envoi = Date.now();
   try {
     await db.collection("traces").doc(trajet.id).set({ nom: `Trajet de ${monPseudo() || "quelqu'un"}, ${quand(Date.parse(trajet.debut))}`, pts: trajet.pts,
       debut: trajet.debut, fin: new Date().toISOString(), par: S.moi, cree: Date.parse(trajet.debut), enDirect: !fini });
@@ -145,7 +145,7 @@ async function arreterTrajet() {
   toast(n > 1 ? `Trajet enregistré (${n} points)` : "Trajet trop court, rien d'enregistré"); majCarte();
 }
 const gpsBoutons = () => S.ecrire ? (suivi != null
-  ? `<button class="btn rouge" data-gps="stop">■ Arrêter le trajet · ${trajet ? trajet.pts.length / 2 : 0} pts</button>`
+  ? `<button class="btn rouge" data-gps="stop">■ Arrêter le trajet · ${trajet ? trajet.pts.length / 2 : 0} pts${maPos && maPos.prec ? " · ±" + maPos.prec + " m" : ""}</button>`
   : `<button class="btn jaune" data-gps="go">● Enregistrer mon trajet</button>`) + `<button class="btn" data-gps="ici">Où suis-je ?</button>` : "";
 document.addEventListener("click", async (e) => {
   const b = e.target.closest("[data-gps]"); if (!b) return;
