@@ -39,24 +39,40 @@ input:focus-visible,textarea:focus-visible,button:focus-visible{outline:3px soli
 .btn{font:700 1rem var(--body);background:var(--jaune);color:var(--on-jaune);border:0;border-radius:999px;padding:14px 22px;cursor:pointer}
 .btn.autre{background:transparent;color:var(--ink);border:1px solid var(--line)}
 .btn:disabled{opacity:.6}
+.lg{margin-left:auto;display:flex;gap:4px;background:#ffffff1f;border-radius:999px;padding:3px}.lg button{border:0;background:transparent;color:var(--on-deep);font:700 .8rem var(--body);padding:6px 11px;border-radius:999px;cursor:pointer}.lg button[aria-pressed="true"]{background:var(--on-deep);color:var(--deep)}
 .merci{text-align:center;display:grid;gap:12px;padding:28px 16px}
 .merci .coche{font-size:2.4rem}
 .err{color:var(--alerte);font-weight:700}
 </style>
 </head>
 <body>
-<header><div class="in"><img src="logo2.svg" alt=""><div><b>Questionnaire</b><small id="site">Workshop S5</small></div></div></header>
+<header><div class="in"><img src="logo2.svg" alt=""><div><b id="titre">Questionnaire</b><small id="site">Workshop S5</small></div><div class="lg" id="langues"></div></div></header>
 <main id="m"><p class="muted">Chargement…</p></main>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="config.js"></script>
 <script>
 const SITES={hanoi:"Hanoï · Bãi Giữa",tasung:"Tà Sung"};
-const k=new URLSearchParams(location.search).get("site"),site=SITES[k]?k:"hanoi";
-document.getElementById("site").textContent="Workshop S5 · "+SITES[site];
+const TXT={
+  fr:{titre:"Questionnaire",h1:"Quelques questions",intro:"Réponds comme tu veux ; tu peux laisser une question vide. Aucun nom n'est demandé.",lieu:"Lieu (facultatif)",profil:"Qui es-tu ? (facultatif : métier, âge approximatif…)",oui:"Oui",non:"Non",autre:"Autre",prec:"Préciser (facultatif)",envoyer:"Envoyer mes réponses",envoi:"Envoi…",merci:"Merci !",enreg:"Tes réponses sont enregistrées.",encore:"Remplir pour une autre personne",une:"Réponds à au moins une question.",echec:"L'envoi a échoué, réessaie dans un instant.",vide:"Aucune question n'est encore publiée pour ce site.",indispo:"Le questionnaire n'est pas disponible pour le moment.",charge:"Chargement…"},
+  vi:{titre:"Phiếu khảo sát",h1:"Vài câu hỏi",intro:"Ông/Bà cứ trả lời tùy ý, có thể bỏ trống câu nào cũng được. Không cần ghi tên.",lieu:"Địa điểm (không bắt buộc)",profil:"Ông/Bà là ai? (không bắt buộc: nghề nghiệp, tuổi ước chừng…)",oui:"Có",non:"Không",autre:"Khác",prec:"Nói rõ thêm (không bắt buộc)",envoyer:"Gửi câu trả lời",envoi:"Đang gửi…",merci:"Cảm ơn!",enreg:"Câu trả lời của Ông/Bà đã được ghi lại.",encore:"Điền cho người khác",une:"Xin trả lời ít nhất một câu hỏi.",echec:"Gửi không được, xin thử lại sau ít phút.",vide:"Chưa có câu hỏi nào cho địa điểm này.",indispo:"Hiện chưa mở được phiếu khảo sát.",charge:"Đang tải…"}};
+const P=new URLSearchParams(location.search),k=P.get("site"),site=SITES[k]?k:"hanoi";
+let lang=P.get("lang")==="vi"?"vi":"fr";
+try{if(!P.get("lang")&&localStorage.getItem("lang")==="vi")lang="vi"}catch(e){}
+const t=x=>TXT[lang][x];
 const SB=supabase.createClient(CONFIG.url,CONFIG.cle),m=document.getElementById("m");
 const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-let qs=[],uid=null;
+let qs=[],uid=null,fini=false;
+const qtexte=q=>lang==="vi"&&q.texte_vi?q.texte_vi:q.texte;
+function entete(){
+  document.documentElement.lang=lang;document.title=t("titre")+" · Workshop Atlas";
+  document.getElementById("titre").textContent=t("titre");document.getElementById("site").textContent="Workshop S5 · "+SITES[site];
+  document.getElementById("langues").innerHTML=[["fr","Français"],["vi","Tiếng Việt"]].map(([c,l])=>'<button type="button" data-l="'+c+'" aria-pressed="'+(lang===c)+'" lang="'+c+'">'+l+'</button>').join("");
+}
+document.getElementById("langues").addEventListener("click",e=>{const b=e.target.closest("[data-l]");if(!b||b.dataset.l===lang)return;
+  const garde={};document.querySelectorAll("#f input,#f textarea").forEach(x=>{garde[x.id||x.name+"|"+x.value]=x.type==="radio"?x.checked:x.value});
+  lang=b.dataset.l;try{localStorage.setItem("lang",lang)}catch(x){}entete();if(!fini)formulaire(garde);else merci()});
 async function init(){
+  entete();m.innerHTML='<p class="muted">'+t("charge")+'</p>';
   try{
     let {data:{session}}=await SB.auth.getSession();
     if(!session){const r=await SB.auth.signInAnonymously();if(r.error)throw r.error;session=r.data.session}
@@ -65,33 +81,33 @@ async function init(){
     if(error)throw error;
     qs=data.filter(r=>(r.data.site||"hanoi")===site).map(r=>({id:r.id,...r.data})).sort((a,b)=>(a.ordre||0)-(b.ordre||0));
     formulaire();
-  }catch(e){m.innerHTML=`<p class="err">Le questionnaire n'est pas disponible pour le moment.</p><p class="muted">Réessaie dans un instant. (${esc(e.message||e.code||"erreur")})</p>`}
+  }catch(e){m.innerHTML='<p class="err">'+t("indispo")+'</p><p class="muted">('+esc(e.message||e.code||"erreur")+')</p>'}
 }
-function formulaire(){
-  if(!qs.length){m.innerHTML=`<h1>Questionnaire</h1><p class="muted">Aucune question n'est encore publiée pour ce site.</p>`;return}
-  m.innerHTML=`<div><h1>Quelques questions</h1><p class="muted">Réponds comme tu veux ; tu peux laisser une question vide. Aucun nom n'est demandé.</p></div>
-  <form id="f"><div class="carte"><label class="champ">Lieu (facultatif)<input type="text" id="lieu" autocomplete="off"></label>
-  <label class="champ">Qui es-tu ? (facultatif : métier, âge approximatif…)<input type="text" id="profil" autocomplete="off"></label></div>
-  ${qs.map((q,i)=>`<fieldset class="carte"><legend>${i+1}. ${esc(q.texte)}</legend>${q.type==="ouverte"
-    ?`<textarea id="r_${esc(q.id)}" aria-label="Réponse à la question ${i+1}"></textarea>`
-    :`<div class="choix">${[["oui","Oui"],["non","Non"],["autre","Autre"]].map(([v,l])=>`<label><input type="radio" name="r_${esc(q.id)}" value="${v}"><span>${l}</span></label>`).join("")}</div><input type="text" id="ra_${esc(q.id)}" placeholder="Préciser (facultatif)" aria-label="Préciser">`}</fieldset>`).join("")}
-  <div><button class="btn" id="ok">Envoyer mes réponses</button></div><p class="err" id="e" hidden></p></form>`;
+function formulaire(garde){
+  fini=false;
+  if(!qs.length){m.innerHTML='<h1>'+t("titre")+'</h1><p class="muted">'+t("vide")+'</p>';return}
+  m.innerHTML='<div><h1>'+t("h1")+'</h1><p class="muted">'+t("intro")+'</p></div><form id="f"><div class="carte"><label class="champ">'+t("lieu")+'<input type="text" id="lieu" autocomplete="off"></label><label class="champ">'+t("profil")+'<input type="text" id="profil" autocomplete="off"></label></div>'+
+  qs.map((q,i)=>'<fieldset class="carte"><legend>'+(i+1)+'. '+esc(qtexte(q))+'</legend>'+(q.type==="ouverte"
+    ?'<textarea id="r_'+esc(q.id)+'" aria-label="'+(i+1)+'"></textarea>'
+    :'<div class="choix">'+["oui","non","autre"].map(v=>'<label><input type="radio" name="r_'+esc(q.id)+'" value="'+v+'"><span>'+t(v)+'</span></label>').join("")+'</div><input type="text" id="ra_'+esc(q.id)+'" placeholder="'+t("prec")+'" aria-label="'+t("prec")+'">')+'</fieldset>').join("")+
+  '<div><button class="btn" id="ok">'+t("envoyer")+'</button></div><p class="err" id="e" hidden></p></form>';
+  if(garde)for(const x of document.querySelectorAll("#f input,#f textarea")){const c=x.id||x.name+"|"+x.value;if(c in garde){if(x.type==="radio")x.checked=garde[c];else x.value=garde[c]}}
   document.getElementById("f").addEventListener("submit",envoyer);
 }
 async function envoyer(ev){
   ev.preventDefault();const b=document.getElementById("ok"),rep={};
   for(const q of qs){
-    if(q.type==="ouverte"){const v=document.getElementById("r_"+q.id).value.trim();if(v)rep[q.id]={v}}
-    else{const r=document.querySelector(`input[name="r_${q.id}"]:checked`),a=document.getElementById("ra_"+q.id).value.trim();if(r||a)rep[q.id]={v:r?r.value:"autre",...(a?{autre:a}:{})}}
+    if(q.type==="ouverte"){const v=document.getElementById("r_"+q.id).value.trim();if(v)rep[q.id]={q:q.texte,v}}
+    else{const r=document.querySelector('input[name="r_'+q.id+'"]:checked'),a=document.getElementById("ra_"+q.id).value.trim();if(r||a)rep[q.id]={q:q.texte,v:r?r.value:"autre",...(a?{autre:a}:{})}}
   }
-  if(!Object.keys(rep).length){const e=document.getElementById("e");e.hidden=false;e.textContent="Réponds à au moins une question.";return}
-  b.disabled=true;b.textContent="Envoi…";
+  if(!Object.keys(rep).length){const e=document.getElementById("e");e.hidden=false;e.textContent=t("une");return}
+  b.disabled=true;b.textContent=t("envoi");
   const id=crypto.randomUUID().replace(/-/g,"").slice(0,20);
-  const {error}=await SB.from("docs").insert({col:"reponses",id,data:{rep,lieu:document.getElementById("lieu").value.trim().slice(0,120),profil:document.getElementById("profil").value.trim().slice(0,120),par:uid,quand:Date.now(),site,source:"lien"}});
-  if(error){b.disabled=false;b.textContent="Envoyer mes réponses";const e=document.getElementById("e");e.hidden=false;e.textContent="L'envoi a échoué, réessaie dans un instant.";return}
-  m.innerHTML=`<div class="carte merci"><div class="coche">✓</div><h1>Merci !</h1><p>Tes réponses sont enregistrées.</p><div><button class="btn autre" onclick="formulaire()">Remplir pour une autre personne</button></div></div>`;
-  scrollTo(0,0);
+  const {error}=await SB.from("docs").insert({col:"reponses",id,data:{rep,lieu:document.getElementById("lieu").value.trim().slice(0,120),profil:document.getElementById("profil").value.trim().slice(0,120),par:uid,quand:Date.now(),site,source:"lien",langue:lang}});
+  if(error){b.disabled=false;b.textContent=t("envoyer");const e=document.getElementById("e");e.hidden=false;e.textContent=t("echec");return}
+  fini=true;merci();scrollTo(0,0);
 }
+function merci(){m.innerHTML='<div class="carte merci"><div class="coche">✓</div><h1>'+t("merci")+'</h1><p>'+t("enreg")+'</p><div><button class="btn autre" onclick="formulaire()">'+t("encore")+'</button></div></div>'}
 init();
 </script>
 </body>

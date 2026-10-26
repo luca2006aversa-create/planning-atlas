@@ -360,9 +360,14 @@ const STATUTS={afaire:"À faire",encours:"En cours",fait:"Fait"};
 const ORDRE=["afaire","encours","fait"];
 const ONGLETS=[["auj","Aujourd'hui","Jour","i-auj"],["semaine","Semaine","Semaine","i-sem"],["taches","Tâches","Tâches","i-tac"],["carte","Carte","Carte","i-carte"],["mur","Mur","Mur","i-mur"],["questionnaire","Questionnaire","Enquête","i-q"],["consignes","Consignes",null,"i-con"]];
 const FAB={auj:"Créneau",semaine:"Créneau",taches:"Tâche",mur:"Note ou photo",consignes:"Modifier"};
+const QL={
+  fr:{oui:"Oui",non:"Non",autre:"Autre",prec:"Préciser (facultatif)",lieu:"Lieu de l'entretien",lieuEx:"ex. Marché du banc",profil:"Profil (facultatif)",profilEx:"ex. agricultrice, ~50 ans",rep:"Réponse",ok:"Enregistrer cette fiche"},
+  vi:{oui:"Có",non:"Không",autre:"Khác",prec:"Nói rõ thêm (không bắt buộc)",lieu:"Địa điểm phỏng vấn",lieuEx:"vd. chợ",profil:"Người trả lời (không bắt buộc)",profilEx:"vd. nông dân, khoảng 50 tuổi",rep:"Câu trả lời",ok:"Lưu phiếu này"}};
+
+const qt=q=>S.langQ==="vi"&&q.texte_vi?q.texte_vi:q.texte;
 const QTYPES={fermee:"Fermée : oui / non / autre",ouverte:"Ouverte : réponse écrite"};
 const COULEURS=["#c43d2b","#f2b705","#2f7a4f","#2d6a9f","#7b4fa6","#17302a"];
-const lienQ=()=>new URL("questionnaire.html?site="+S.site,location.href).href;
+const lienQ=(l)=>new URL("questionnaire.html?site="+S.site+(l==="vi"?"&lang=vi":""),location.href).href;
 /* fond de carte : rendu OSM de SiteScope, projection équirectangulaire (comme presentations/moteur/carte.js) */
 
 const FORMS={
@@ -378,7 +383,7 @@ const FORMS={
     ["photo","Photo","photo"],["texte","Description","textarea",0,null,"Ce qu'on voit, ce qu'on a observé…"],["lieu","Lieu associé","lieu"],["theme","Thème","text"],["epingle","Épingler sur « Aujourd'hui »","checkbox"]]},
   lieux:{nom:"Lieu",champs:[["nom","Nom du lieu","text",1,null,"ex. Rampe du marché"],["note","Notes sur ce lieu","textarea",0,null,"Ambiance, usages, ce qui change selon l'heure ou le niveau de l'eau…"]]},
   traces:{nom:"Trajet",champs:[["nom","Nom du trajet","text",1]]},
-  questions:{nom:"Question",champs:[["texte","Question","textarea",1],["type","Type","choix",0,QTYPES]]},
+  questions:{nom:"Question",champs:[["texte","Question (français)","textarea",1],["texte_vi","Question en vietnamien (facultatif)","textarea",0,null,"Câu hỏi bằng tiếng Việt"],["type","Type","choix",0,QTYPES]]},
   membres:{nom:"Identifiant",champs:[["pseudo","Ton prénom ou identifiant","text",1,null,"ex. Luca"]]},
   consignes:{nom:"Consignes communes",champs:[["texte","Consignes","textarea",0,null,"Nommage des fichiers, sources, légendes, éthique des entretiens…"]]}
 };
@@ -412,7 +417,7 @@ const COLS=["creneaux","taches","mur","lieux","traces","traits","questions","rep
 const S={creneaux:[],taches:[],mur:[],lieux:[],traces:[],traits:[],questions:[],reponses:[],membres:[],consignes:null,
   moi:null,ecrire:true,vue:"auj",semaine:0,jour:null,type:"",statut:"afaire",theme:"",filtre:"",moiSeul:false,
   outil:"main",couleur:COULEURS[0],calques:{traits:true,traces:true,photos:true,lieux:true},qmode:"repondre",
-  site:(()=>{try{return localStorage.getItem("site")||"hanoi"}catch(e){return "hanoi"}})(),seulQ:location.hash==="#questionnaire",identite:false};
+  site:(()=>{try{return localStorage.getItem("site")||"hanoi"}catch(e){return "hanoi"}})(),seulQ:location.hash==="#questionnaire",identite:false,langQ:(()=>{try{return localStorage.getItem("langq")==="vi"?"vi":"fr"}catch(e){return "fr"}})()};
 let db=null,user=null,assets=null;
 
 const $=s=>document.querySelector(s);
@@ -559,13 +564,15 @@ const VUES={
     const seg=`<div class="seg" role="group" aria-label="Questionnaire">${[["repondre","Répondre"],["questions",`Questions · ${qs.length}`],["resultats",`Réponses · ${S.reponses.length}`]].map(([k,v])=>`<button data-qmode="${k}" aria-pressed="${S.qmode===k}">${v}</button>`).join("")}</div>`;
     let corps="";
     if(S.qmode==="questions"){
-      corps=`<div class="liste">${qs.map((q,i)=>`<div class="q"><span class="n">${i+1}</span><div><div class="titre" style="font-weight:700;overflow-wrap:anywhere">${esc(q.texte)}</div><span class="qui">${q.type==="ouverte"?"Ouverte":"Fermée (oui / non / autre)"} · ${auteur(q)}</span></div>
+      corps=`<div class="liste">${qs.map((q,i)=>`<div class="q"><span class="n">${i+1}</span><div><div class="titre" style="font-weight:700;overflow-wrap:anywhere">${esc(q.texte)}</div>${q.texte_vi?`<div class="qui" lang="vi" style="overflow-wrap:anywhere">${esc(q.texte_vi)}</div>`:`<div class="qui" style="color:var(--alerte)">Pas encore de version vietnamienne</div>`}<span class="qui">${q.type==="ouverte"?"Ouverte":"Fermée (oui / non / autre)"} · ${auteur(q)}</span></div>
         <div class="fl"><button data-qmonte="${esc(q.id)}" aria-label="Monter"${i?"":" disabled"}>${ic("i-haut",14)}</button><button data-qdescend="${esc(q.id)}" aria-label="Descendre"${i<qs.length-1?"":" disabled"}>${ic("i-bas",14)}</button><button data-ouvrir="questions" data-id="${esc(q.id)}" aria-label="Modifier">✎</button></div></div>`).join("")||`<p class="vide">Aucune question pour l'instant : écris la première ci-dessous.</p>`}</div>
       ${S.ecrire&&db?`<div class="compo"><label for="qtexte" style="font-weight:700">Nouvelle question</label><textarea id="qtexte" rows="2" placeholder="ex. Depuis combien de temps habitez-vous sur le banc ?"></textarea>
+        <textarea id="qtexte_vi" rows="2" lang="vi" placeholder="Version vietnamienne (facultatif)" aria-label="Version vietnamienne"></textarea>
         <div class="choix" role="radiogroup">${Object.entries(QTYPES).map(([k,v],i)=>`<label><input type="radio" name="qtype" id="qtype_${k}" value="${k}"${i?"":" checked"}><span>${v}</span></label>`).join("")}</div>
         <div><button class="btn jaune" data-qajout="1">${ic("i-plus",14)}Ajouter au questionnaire</button></div></div>`:""}
-      <div class="compo" style="margin:0"><button class="btn" data-export="questions">Exporter les questions en PDF (à imprimer)</button></div>
-      <div class="lien"><span>Lien à donner pour répondre (questions seules) :</span><code>${esc(lienQ())}</code><button class="btn" data-copier="${esc(lienQ())}">Copier</button></div>
+      <div class="compo" style="margin:0"><span class="qui">Exporter les questions en PDF (à imprimer) :</span><div style="display:flex;flex-wrap:wrap;gap:8px"><button class="btn" data-export="questions" data-lang="fr">Français</button><button class="btn" data-export="questions" data-lang="vi">Tiếng Việt</button><button class="btn" data-export="questions" data-lang="bi">Les deux</button></div></div>
+      <div class="lien"><span>Lien en français :</span><code>${esc(lienQ())}</code><button class="btn" data-copier="${esc(lienQ())}">Copier</button></div>
+      <div class="lien"><span>Lien en vietnamien :</span><code>${esc(lienQ("vi"))}</code><button class="btn" data-copier="${esc(lienQ("vi"))}">Copier</button></div>
       <p class="qui">Ce lien ouvre une page avec seulement les questions de ${esc(SITES[S.site].nom)} : pas de code du groupe, pas de compte. Donne-le tel quel aux personnes interrogées.</p>`;
     }else if(S.qmode==="resultats"){
       const reps=[...S.reponses].sort((a,b)=>(b.quand||0)-(a.quand||0));
@@ -577,13 +584,14 @@ const VUES={
           ${r.filter(x=>x.autre).map(x=>`<p class="citation">${esc(x.autre)}</p>`).join("")}</div>`;}).join(""):`<p class="vide">Écris d'abord des questions.</p>`;
       corps+=`<div class="feuille"><h2>Fiches enregistrées · ${reps.length}</h2>${reps.map((x,i)=>`<div class="barre" style="display:flex;flex-wrap:wrap;gap:8px;justify-content:space-between"><span>N° ${reps.length-i} · ${esc(quand(x.quand))}${x.lieu?` · ${esc(x.lieu)}`:""}${x.profil?` · ${esc(x.profil)}`:""} · ${auteur(x)}</span>${S.ecrire?`<button class="btn rouge" data-supprep="${esc(x.id)}">Supprimer</button>`:""}</div>`).join("")||`<p class="vide">Aucune fiche.</p>`}</div>`;
     }else{
-      corps=qs.length?`<form class="feuille" id="fiche"><div class="duo"><div class="champ"><label for="r_lieu">Lieu de l'entretien</label><input type="text" id="r_lieu" placeholder="ex. Marché du banc"></div>
-        <div class="champ"><label for="r_profil">Profil (facultatif)</label><input type="text" id="r_profil" placeholder="ex. agricultrice, ~50 ans"></div></div>
-        ${qs.map((q,i)=>`<fieldset><legend>${i+1}. ${esc(q.texte)}</legend>${q.type==="ouverte"?`<textarea id="r_${esc(q.id)}" rows="3" aria-label="Réponse"></textarea>`
-          :`<div class="choix">${[["oui","Oui"],["non","Non"],["autre","Autre"]].map(([k,l])=>`<label><input type="radio" name="r_${esc(q.id)}" id="r_${esc(q.id)}_${k}" value="${k}"><span>${l}</span></label>`).join("")}</div><input type="text" id="ra_${esc(q.id)}" placeholder="Préciser (facultatif)">`}</fieldset>`).join("")}
-        <div><button class="btn jaune">Enregistrer cette fiche</button></div></form>`:`<p class="vide">Aucune question pour l'instant. Va dans « Questions » pour les écrire.</p>`;
+      corps=qs.length?`<form class="feuille" id="fiche"><div class="duo"><div class="champ"><label for="r_lieu">${QL[S.langQ].lieu}</label><input type="text" id="r_lieu" placeholder="${QL[S.langQ].lieuEx}"></div>
+        <div class="champ"><label for="r_profil">${QL[S.langQ].profil}</label><input type="text" id="r_profil" placeholder="${QL[S.langQ].profilEx}"></div></div>
+        ${qs.map((q,i)=>`<fieldset><legend lang="${S.langQ}">${i+1}. ${esc(qt(q))}</legend>${q.type==="ouverte"?`<textarea id="r_${esc(q.id)}" rows="3" aria-label="${QL[S.langQ].rep}"></textarea>`
+          :`<div class="choix">${["oui","non","autre"].map(k=>`<label><input type="radio" name="r_${esc(q.id)}" id="r_${esc(q.id)}_${k}" value="${k}"><span>${QL[S.langQ][k]}</span></label>`).join("")}</div><input type="text" id="ra_${esc(q.id)}" placeholder="${QL[S.langQ].prec}">`}</fieldset>`).join("")}
+        <div><button class="btn jaune">${QL[S.langQ].ok}</button></div></form>`:`<p class="vide">Aucune question pour l'instant. Va dans « Questions » pour les écrire.</p>`;
     }
-    return `<div class="tete"><h1>Questionnaire<small>${S.reponses.length} fiche${S.reponses.length>1?"s":""} remplie${S.reponses.length>1?"s":""}</small></h1>${seg}</div>${corps}`;
+    return `<div class="tete"><h1>Questionnaire<small>${S.reponses.length} fiche${S.reponses.length>1?"s":""} remplie${S.reponses.length>1?"s":""}</small></h1>${seg}</div>
+    <div class="seg" role="group" aria-label="Langue du questionnaire" style="max-width:340px">${[["fr","Français"],["vi","Tiếng Việt"]].map(([k,l])=>`<button data-qlang="${k}" aria-pressed="${S.langQ===k}" lang="${k}">${l}</button>`).join("")}</div>${corps}`;
   },
   consignes(){
     const c=S.consignes;
@@ -842,8 +850,8 @@ $("#dlg").addEventListener("cancel",ev=>{if(edit&&edit.col==="membres"&&!monPseu
 async function ajouterQuestion(){
   const t=$("#qtexte"),texte=t.value.trim(),type=(document.querySelector('input[name="qtype"]:checked')||{}).value||"fermee";
   if(!texte){toast("Écris d'abord la question.");t.focus();return}
-  try{await db.collection("questions").doc().set({texte,type,ordre:Math.max(0,...S.questions.map(q=>q.ordre||0))+1,par:S.moi,auteur:S.moi,cree:Date.now(),maj:Date.now()});
-    t.value="";t.focus();toast("Question ajoutée au questionnaire")}catch(e){refus(e)}
+  try{await db.collection("questions").doc().set({texte,texte_vi:($("#qtexte_vi")||{}).value?$("#qtexte_vi").value.trim():"",type,ordre:Math.max(0,...S.questions.map(q=>q.ordre||0))+1,par:S.moi,auteur:S.moi,cree:Date.now(),maj:Date.now()});
+    t.value="";if($("#qtexte_vi"))$("#qtexte_vi").value="";t.focus();toast("Question ajoutée au questionnaire")}catch(e){refus(e)}
 }
 async function deplacerQuestion(id,sens){
   const qs=[...S.questions].sort((a,b)=>(a.ordre||0)-(b.ordre||0)),i=qs.findIndex(q=>q.id===id),j=i+sens;if(j<0||j>=qs.length)return;
@@ -869,7 +877,7 @@ document.addEventListener("submit",async ev=>{
 
 /* ---------- navigation ---------- */
 document.addEventListener("click",async ev=>{
-  const t=ev.target.closest("[data-vue],[data-ouvrir],[data-statut],[data-sem],[data-jour],[data-type],[data-vstatut],[data-theme],[data-moiseul],[data-outil],[data-nuance],[data-calque],[data-zoom],[data-annuler-trait],[data-qmode],[data-qajout],[data-qmonte],[data-qdescend],[data-supprep],[data-copier],#fab,#moiBtn");
+  const t=ev.target.closest("[data-vue],[data-ouvrir],[data-statut],[data-sem],[data-jour],[data-type],[data-vstatut],[data-theme],[data-moiseul],[data-outil],[data-nuance],[data-calque],[data-zoom],[data-annuler-trait],[data-qmode],[data-qlang],[data-qajout],[data-qmonte],[data-qdescend],[data-supprep],[data-copier],#fab,#moiBtn");
   if(!t||t.closest("dialog"))return;
   const d=t.dataset;
   if(t.id==="moiBtn"){ouvrir("membres",S.moi,{});return}
@@ -888,6 +896,7 @@ document.addEventListener("click",async ev=>{
   if(d.annulerTrait){const m=S.traits.filter(x=>x.par===S.moi).sort((a,b)=>(b.cree||0)-(a.cree||0))[0];if(m)supprimerTrait(m.id);else toast("Aucun trait à toi à annuler.");return}
   if(d.qmode){S.qmode=d.qmode;render();return}
   if(d.qajout){ajouterQuestion();return}
+  if(d.qlang){S.langQ=d.qlang;try{localStorage.setItem("langq",d.qlang)}catch(e){}render();return}
   if(d.qmonte){deplacerQuestion(d.qmonte,-1);return}
   if(d.qdescend){deplacerQuestion(d.qdescend,1);return}
   if(d.supprep){if(t.dataset.ok!=="1"){t.dataset.ok="1";t.textContent="Confirmer";return}try{await db.collection("reponses").doc(d.supprep).delete();toast("Fiche supprimée")}catch(e){refus(e)}return}

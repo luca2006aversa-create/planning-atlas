@@ -113,7 +113,7 @@ function exDialogue() {
 document.addEventListener("click", async (e) => {
   const b = e.target.closest("[data-export],[data-exporter]"); if (!b) return;
   if (b.dataset.export === "planning") return exDialogue();
-  if (b.dataset.export === "questions") return exQuestions();
+  if (b.dataset.export === "questions") return exQuestions(b.dataset.lang);
   const m = b.dataset.exporter, d = document.getElementById("exdlg");
   if (m === "fermer") return d.close();
   const rad = d.querySelector('input[name="exp"]:checked'); EX.portee = rad ? rad.value : "sem";
@@ -123,14 +123,21 @@ document.addEventListener("click", async (e) => {
   catch (x) { msg.textContent = "Export impossible : " + (x.message || "erreur") + "."; }
 });
 
-/* ---- questionnaire à imprimer ---- */
-function exQuestions() {
+/* ---- questionnaire à imprimer : français, vietnamien ou les deux ---- */
+const EXQ={
+  fr:{titre:"Questionnaire",date:"Date",lieu:"Lieu",profil:"Profil (facultatif)",oui:"Oui",non:"Non",autre:"Autre",pied:"Réponse en ligne"},
+  vi:{titre:"Phiếu khảo sát",date:"Ngày",lieu:"Địa điểm",profil:"Người trả lời (không bắt buộc)",oui:"Có",non:"Không",autre:"Khác",pied:"Trả lời trực tuyến"}};
+function exQuestions(lang) {
+  lang = lang || S.langQ || "fr";
   const qs = [...S.questions].sort((a, b) => (a.ordre || 0) - (b.ordre || 0));
   if (!qs.length) return toast("Écris d'abord des questions.");
-  const lien = lienQ(), cases = `<span class="c"></span> Oui &nbsp;&nbsp;&nbsp; <span class="c"></span> Non &nbsp;&nbsp;&nbsp; <span class="c"></span> Autre : <span class="trait court"></span>`;
-  const corps = `<h1>Questionnaire · ${exHtml(exSite())}</h1><p class="sous">Workshop S5 · Atlas</p>
-  <div class="entete"><span>Date : <span class="trait court"></span></span><span>Lieu : <span class="trait long"></span></span><span>Profil (facultatif) : <span class="trait long"></span></span></div>` +
-    qs.map((q, i) => `<div class="q"><p class="qt"><b>${i + 1}.</b> ${exHtml(q.texte)}</p>${q.type === "ouverte" ? `<div class="ligne"></div><div class="ligne"></div>` : `<p class="rep">${cases}</p>`}</div>`).join("") +
-    `<p class="pied">Réponse en ligne : ${exHtml(lien)}</p>`;
-  exImprimer("Questionnaire", corps, `h1{font-size:22px;margin:0}.sous{margin:2px 0 14px;color:#555}.entete{display:flex;gap:18px;flex-wrap:wrap;margin-bottom:18px;font-size:12px}.trait{display:inline-block;border-bottom:1px dotted #333;vertical-align:baseline}.trait.court{width:110px}.trait.long{width:170px}.q{break-inside:avoid;margin:0 0 20px}.qt{margin:0 0 8px;font-size:14px}.rep{margin:6px 0 0;font-size:14px}.c{display:inline-block;width:15px;height:15px;border:1.5px solid #111;border-radius:3px;vertical-align:-3px;margin-right:4px}.ligne{border-bottom:1.5px dotted #444;height:30px}.pied{margin-top:24px;font-size:11px;color:#666}`);
+  if (lang !== "fr" && !qs.some((q) => q.texte_vi)) return toast("Aucune question n'a de version vietnamienne.");
+  const bi = lang === "bi", L = bi ? ["fr", "vi"] : [lang], lib = (k) => L.map((l) => EXQ[l][k]).join(" / ");
+  const cases = `<span class="c"></span> ${lib("oui")} &nbsp;&nbsp;&nbsp; <span class="c"></span> ${lib("non")} &nbsp;&nbsp;&nbsp; <span class="c"></span> ${lib("autre")} : <span class="trait court"></span>`;
+  const texte = (q) => bi ? `${exHtml(q.texte)}${q.texte_vi ? `<br><span class="vi">${exHtml(q.texte_vi)}</span>` : ""}` : exHtml(lang === "vi" && q.texte_vi ? q.texte_vi : q.texte);
+  const corps = `<h1>${exHtml(L.map((l) => EXQ[l].titre).join(" / "))} · ${exHtml(exSite())}</h1><p class="sous">Workshop S5 · Atlas</p>
+  <div class="entete"><span>${lib("date")} : <span class="trait court"></span></span><span>${lib("lieu")} : <span class="trait long"></span></span><span>${lib("profil")} : <span class="trait long"></span></span></div>` +
+    qs.map((q, i) => `<div class="q"><p class="qt"><b>${i + 1}.</b> ${texte(q)}</p>${q.type === "ouverte" ? `<div class="ligne"></div><div class="ligne"></div>` : `<p class="rep">${cases}</p>`}</div>`).join("") +
+    `<p class="pied">${exHtml(lib("pied"))} : ${exHtml(lienQ(lang === "vi" ? "vi" : "fr"))}</p>`;
+  exImprimer("Questionnaire", corps, `h1{font-size:22px;margin:0}.sous{margin:2px 0 14px;color:#555}.entete{display:flex;gap:18px;flex-wrap:wrap;margin-bottom:18px;font-size:12px}.trait{display:inline-block;border-bottom:1px dotted #333;vertical-align:baseline}.trait.court{width:110px}.trait.long{width:170px}.q{break-inside:avoid;margin:0 0 20px}.qt{margin:0 0 8px;font-size:14px}.vi{color:#1a4d7a;font-style:italic}.rep{margin:6px 0 0;font-size:14px}.c{display:inline-block;width:15px;height:15px;border:1.5px solid #111;border-radius:3px;vertical-align:-3px;margin-right:4px}.ligne{border-bottom:1.5px dotted #444;height:30px}.pied{margin-top:24px;font-size:11px;color:#666}`);
 }
