@@ -47,6 +47,8 @@ fiCss.textContent = `.fichiers{display:grid;grid-template-columns:repeat(auto-fi
 .depose.survol{border-color:var(--jaune);background:var(--sunk)}
 .quota{font-size:.8rem;color:var(--muted)}
 @media (max-width:700px){.depose .glisse{display:none}.depose{padding:12px}}
+@media (min-width:701px){#depose{grid-auto-flow:column;justify-content:center;align-items:center;gap:14px;padding:12px 16px}}
+.jauge-stock{display:grid;gap:4px;width:min(420px,100%)}.jauge-stock i{display:block;height:6px;border-radius:99px;background:var(--sunk);overflow:hidden}.jauge-stock i b{display:block;height:100%;background:var(--s-fait)}.jauge-stock.haut i b{background:var(--alerte)}.jauge-stock .quota{text-align:center}
 details.depose{text-align:left;justify-items:stretch;padding:10px 14px}details.depose>summary{cursor:pointer;font-weight:700;list-style:none}details.depose>summary::-webkit-details-marker{display:none}details.depose>summary::after{content:" ▾";color:var(--muted)}details.depose[open]>summary::after{content:" ▴"}`;
 document.head.appendChild(fiCss);
 
@@ -63,7 +65,7 @@ async function fiSignerHub(chemins) {
 async function fiSupprimer(f) {
   if (!f || !f.chemin) return;
   if (fiSurHub(f)) await fetch(HUB + "/file?chemin=" + encodeURIComponent(f.chemin), { method: "DELETE", headers: { Authorization: "Bearer " + await fiJeton() } }).catch(() => {});
-  else await SB.storage.from("documents").remove([f.chemin]).catch(() => {});
+  else await SB.storage.from("documents").remove([f.chemin, f.chemin + ".vign.jpg"]).catch(() => {});
 }
 function fiEnvoiHub(f, chemin, progres) {
   return new Promise(async (ok, ko) => {
@@ -90,7 +92,23 @@ async function fiVignettes() {
   const surHub = manque.filter((p) => fiSurHub(S.fichiers.find((x) => x.chemin === p))), surSb = manque.filter((p) => !surHub.includes(p));
   if (surSb.length) { const { data } = await SB.storage.from("documents").createSignedUrls(surSb, 3600); for (const r of data || []) if (r.signedUrl) fiLiens.set(r.path, { url: r.signedUrl, exp: Date.now() + 3600000 }); }
   if (surHub.length) { try { const u = await fiSignerHub(surHub); for (const p of surHub) if (u[p]) fiLiens.set(p, { url: HUB + u[p], exp: Date.now() + 540000 }); } catch (e) {} }
-  for (const i of a) { const c = fiLiens.get(i.dataset.fpath); if (c) i.src = c.url; }
+  for (const i of a) { const c = fiLiens.get(i.dataset.fpath); if (c) { i.onload = () => fiVignAuto(i); i.src = c.url; } }
+}
+let fiVignFile = Promise.resolve();
+async function fiMiniatureBlob(src, w, h) {
+  const k = Math.min(1, 480 / Math.max(w, h)), c = document.createElement("canvas"); c.width = Math.max(1, Math.round(w * k)); c.height = Math.max(1, Math.round(h * k));
+  c.getContext("2d").drawImage(src, 0, 0, c.width, c.height); return new Promise((r) => c.toBlob(r, "image/jpeg", 0.72));
+}
+async function fiEnregistrerVign(f, blob) {
+  const { error } = await SB.storage.from("documents").upload(f.chemin + ".vign.jpg", blob, { contentType: "image/jpeg", cacheControl: "31536000", upsert: false });
+  if (error && !/exist|duplicate/i.test(error.message)) return;
+  await db.collection("fichiers").doc(f.id).update({ vign: true });
+}
+/* une photo déjà déposée sans miniature : on la crée une fois, quand elle est affichée en entier */
+function fiVignAuto(img) {
+  const f = S.fichiers.find((x) => x.chemin === img.dataset.fpath);
+  if (!f || f.vign || fiSurHub(f) || !S.ecrire || !db || !img.naturalWidth || Math.max(img.naturalWidth, img.naturalHeight) < 700) return;
+  fiVignFile = fiVignFile.then(async () => { try { const b = await fiMiniatureBlob(img, img.naturalWidth, img.naturalHeight); if (b) await fiEnregistrerVign(f, b); } catch (e) {} });
 }
 const fiPdf = (f) => /pdf$/i.test(f.type || "") || /\.pdf$/i.test(f.nom || "");
 const fiPdfVign = new Map();
@@ -98,9 +116,10 @@ const FI_COULEURS = { DOC: "#2b579a", DOCX: "#2b579a", ODT: "#2b579a", XLS: "#1d
 const fiCouleur = (f) => FI_COULEURS[fiExt(f)] || "#5b6d66";
 const ICONE_DOC = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>';
 const ICONE_3PTS = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>';
+const fiChemin = (f) => f.vign && !fiSurHub(f) ? f.chemin + ".vign.jpg" : f.chemin;
 function fiApercu(f) {
-  const c = fiLiens.get(f.chemin);
-  if (fiImage(f)) return `<img data-fpath="${esc(f.chemin)}" alt="${esc(f.nom)}"${c ? ` src="${esc(c.url)}"` : ""} loading="lazy">`;
+  const p = fiChemin(f), c = fiLiens.get(p);
+  if (fiImage(f)) return `<img data-fpath="${esc(p)}" alt="${esc(f.nom)}"${c ? ` src="${esc(c.url)}"` : ""} loading="lazy" decoding="async">`;
   if (fiPdf(f)) { const v = fiPdfVign.get(f.chemin); return (v ? `<img src="${v}" alt="">` : `<img data-fpdf="${esc(f.chemin)}" alt="" hidden>`) + (v ? "" : `<span class="ficone" data-fsecours><b>PDF</b></span>`); }
   return `<span class="ficone">${ICONE_DOC}<b>${esc(fiExt(f))}</b></span>`;
 }
@@ -196,7 +215,7 @@ VUES.fichiers = () => {
   const l = S.fichiers.filter((x) => cherche(x, "nom", "note", "theme") && (!S.theme || x.theme === S.theme)).sort((a, b) => (b.cree || 0) - (a.cree || 0));
   const total = S.fichiers.reduce((s, x) => s + (x.taille || 0), 0);
   return `<div class="tete"><h1>Fichiers<small>PDF, documents, tableurs, photos : tout au même endroit</small></h1></div>
-  ${S.ecrire && db ? `<div class="depose" id="depose"><span class="glisse">Glisse des fichiers ici, ou</span><label class="btn jaune" style="cursor:pointer">${ic("i-plus", 14)}Ajouter des fichiers<input type="file" id="fiFichiers" multiple hidden></label><span class="quota">${HUB ? "Stockage sur le NAS, " + fiMaxTxt() + " maximum par fichier" : "50 Mo maximum par fichier"} · ${esc(fiTaille(total))} déjà déposés ici</span></div>` : ""}
+  ${S.ecrire && db ? `<div class="depose" id="depose"><span class="glisse">Glisse des fichiers ici, ou</span><label class="btn jaune" style="cursor:pointer">${ic("i-plus", 14)}Ajouter des fichiers<input type="file" id="fiFichiers" multiple hidden></label><div class="jauge-stock${!HUB && total > 0.8 * 1073741824 ? " haut" : ""}"><span class="quota">${HUB ? "Stockage sur le NAS, " + fiMaxTxt() + " maximum par fichier" : "50 Mo maximum par fichier"} · ${esc(fiTaille(total))} déposés${HUB ? "" : " sur ~1 Go (photos du mur en plus)"}</span>${HUB ? "" : `<i><b style="width:${Math.min(100, Math.round(total / 10737418.24))}%"></b></i>`}</div></div>` : ""}
   ${nasCarte()}
   ${themes.length ? `<div class="puces">${[["", "Tout"], ...themes.map((x) => [x, x])].map(([k, v]) => `<button data-theme="${esc(k)}" aria-pressed="${S.theme === k}">${esc(v)}</button>`).join("")}</div>` : ""}
   ${l.length ? `<div class="fichiers">${l.map(fiCarte).join("")}</div>` : vide("Aucun fichier pour l'instant. Dépose un PDF, un tableur, une photo…")}`;
@@ -216,7 +235,9 @@ async function fiEnvoyer(liste) {
       if (error) { toast(/bucket/i.test(error.message) ? "Le dossier de fichiers n'est pas encore activé : lance le SQL « documents » dans Supabase." : "Envoi impossible : " + error.message); return; }
     }
     const now = Date.now();
-    try { await db.collection("fichiers").doc(nouvelId()).set({ nom: f.name, chemin, taille, stock: HUB ? "hub" : "sb", type: f.type || "", theme: S.theme || "", note: "", par: S.moi, auteur: S.moi, cree: now, maj: now }); ok++; }
+    let vign = false;
+    if (!HUB && fiImage({ type: f.type })) { try { const bm = await createImageBitmap(f), b = await fiMiniatureBlob(bm, bm.width, bm.height); if (b) { const r = await SB.storage.from("documents").upload(chemin + ".vign.jpg", b, { contentType: "image/jpeg", cacheControl: "31536000" }); vign = !r.error; } } catch (e) {} }
+    try { await db.collection("fichiers").doc(nouvelId()).set({ nom: f.name, chemin, taille, vign, stock: HUB ? "hub" : "sb", type: f.type || "", theme: S.theme || "", note: "", par: S.moi, auteur: S.moi, cree: now, maj: now }); ok++; }
     catch (e) { await fiSupprimer({ chemin, stock: HUB ? "hub" : "sb" }); refus(e); return; }
   }
   if (ok) toast(ok === 1 ? "Fichier ajouté" : `${ok} fichiers ajoutés`);
