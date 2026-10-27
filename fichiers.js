@@ -11,17 +11,43 @@ FORMS.fichiers = { nom: "Fichier", champs: [
 document.querySelector("svg defs, svg")?.insertAdjacentHTML("beforeend",
   `<symbol id="i-fich" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>`);
 const fiCss = document.createElement("style");
-fiCss.textContent = `.fichiers{display:grid;gap:8px}
-.fich{display:grid;grid-template-columns:56px 1fr auto;gap:12px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px;min-width:0}
-.fich .vign{width:56px;height:56px;border-radius:8px;background:var(--sunk);display:grid;place-items:center;font:800 .8rem var(--display);letter-spacing:.04em;color:var(--muted);overflow:hidden}
-.fich .vign img{width:100%;height:100%;object-fit:cover}
-.fich .ouvrir{border:0;background:transparent;text-align:left;padding:0;display:grid;gap:2px;min-width:0;color:inherit;cursor:pointer}
-.fich .nom{font-weight:700;overflow-wrap:anywhere;line-height:1.3}
-.fich .meta{font-size:.8rem;color:var(--muted);display:flex;flex-wrap:wrap;gap:2px 10px}
-.fich .note{font-size:.85rem;color:var(--muted);overflow-wrap:anywhere}
+fiCss.textContent = `.fichiers{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:12px}
+.fcarte{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden;min-width:0;display:grid;grid-template-rows:auto auto}
+.fprev{position:relative;aspect-ratio:4/3;border:0;padding:0;background:var(--sunk);display:grid;place-items:center;cursor:pointer;overflow:hidden;color:#fff}
+.fprev img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.fprev.pdf img{object-fit:contain;object-position:top;background:#fff}
+.fprev .ficone{display:grid;justify-items:center;gap:6px}
+.fprev .ficone svg{width:44px;height:44px;opacity:.9}
+.fprev .ficone b{font:800 1.05rem var(--display);letter-spacing:.06em}
+.fmenu{position:absolute;right:6px;top:6px;z-index:2;width:34px;height:34px;border-radius:50%;border:0;background:#000000a8;color:#fff;display:grid;place-items:center;cursor:pointer;padding:0;backdrop-filter:blur(4px)}
+.fmenu svg{width:18px;height:18px}
+.fmenu:hover{background:#000}
+.fpied{padding:9px 11px 10px;display:grid;gap:2px;min-width:0}
+.fnom{font-weight:700;font-size:.9rem;line-height:1.25;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow-wrap:anywhere}
+.fsous{font-size:.75rem;color:var(--muted);display:flex;gap:6px;flex-wrap:wrap}
+.finfo{max-width:480px;width:94vw;border:1px solid var(--line);border-radius:16px;background:var(--surface);color:var(--ink);padding:0;overflow:hidden}
+.finfo::backdrop{background:#000a}
+.finfo .haut{aspect-ratio:16/9;background:var(--sunk);position:relative;display:grid;place-items:center;color:#fff}
+.finfo .haut img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#111}
+.finfo .corps{padding:14px 16px 16px;display:grid;gap:10px}
+.finfo h3{margin:0;font:700 1.1rem/1.3 var(--body);text-transform:none;letter-spacing:0;overflow-wrap:anywhere}
+.finfo dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:.88rem}
+.finfo dt{color:var(--muted)}.finfo dd{margin:0;overflow-wrap:anywhere}
+.finfo .desc{background:var(--sunk);border-radius:10px;padding:10px 12px;font-size:.92rem;white-space:pre-wrap;overflow-wrap:anywhere}
+.finfo .acts{display:flex;flex-wrap:wrap;gap:8px}
+.flight{border:0;padding:0;background:#000;width:100vw;max-width:100vw;height:100dvh;max-height:100dvh;color:#fff}
+.flight::backdrop{background:#000}
+.flight .zone{position:absolute;inset:0;display:grid;place-items:center}
+.flight img{max-width:100%;max-height:100%;object-fit:contain}
+.flight .bar{position:absolute;left:0;right:0;top:0;display:flex;align-items:center;gap:10px;padding:calc(10px + env(safe-area-inset-top,0px)) 12px 10px;background:linear-gradient(#000c,transparent);z-index:3}
+.flight .bar b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.flight button.r{width:40px;height:40px;border-radius:50%;border:0;background:#ffffff22;color:#fff;font-size:1.2rem;cursor:pointer;display:grid;place-items:center;padding:0}
+.flight .nav{position:absolute;top:50%;transform:translateY(-50%);z-index:3}.flight .nav.g{left:10px}.flight .nav.d{right:10px}
 .depose{border:2px dashed var(--line);border-radius:14px;padding:16px;text-align:center;display:grid;gap:8px;justify-items:center;background:var(--surface)}
 .depose.survol{border-color:var(--jaune);background:var(--sunk)}
-.quota{font-size:.8rem;color:var(--muted)}`;
+.quota{font-size:.8rem;color:var(--muted)}
+@media (max-width:700px){.depose .glisse{display:none}.depose{padding:12px}}
+details.depose{text-align:left;justify-items:stretch;padding:10px 14px}details.depose>summary{cursor:pointer;font-weight:700;list-style:none}details.depose>summary::-webkit-details-marker{display:none}details.depose>summary::after{content:" ▾";color:var(--muted)}details.depose[open]>summary::after{content:" ▴"}`;
 document.head.appendChild(fiCss);
 
 const HUB = (typeof CONFIG !== "undefined" && CONFIG.hub ? String(CONFIG.hub).replace(/\/$/, "") : "");
@@ -66,20 +92,96 @@ async function fiVignettes() {
   if (surHub.length) { try { const u = await fiSignerHub(surHub); for (const p of surHub) if (u[p]) fiLiens.set(p, { url: HUB + u[p], exp: Date.now() + 540000 }); } catch (e) {} }
   for (const i of a) { const c = fiLiens.get(i.dataset.fpath); if (c) i.src = c.url; }
 }
-function fiCarte(f) {
-  const lieu = nomLieu(f.lieu), c = fiLiens.get(f.chemin);
-  return `<div class="fich"><div class="vign">${fiImage(f) ? `<img data-fpath="${esc(f.chemin)}" alt=""${c ? ` src="${esc(c.url)}"` : ""} loading="lazy">` : esc(fiExt(f))}</div>
-    <button class="ouvrir" data-fouvrir="${esc(f.id)}"><span class="nom">${esc(f.nom)}</span>
-      <span class="meta"><span>${esc(fiExt(f))} · ${esc(fiTaille(f.taille || 0))}</span>${lieu ? `<span>${ic("i-lieu", 12)} ${esc(lieu)}</span>` : ""}${f.theme ? `<span class="etiquette">${esc(f.theme)}</span>` : ""}<span>${auteur(f)} · ${esc(quand(f.cree))}</span></span>
-      ${f.note ? `<span class="note">${esc(f.note)}</span>` : ""}</button>
-    ${S.ecrire ? `<button class="btn ico" data-ouvrir="fichiers" data-id="${esc(f.id)}" aria-label="Modifier">✎</button>` : ""}</div>`;
+const fiPdf = (f) => /pdf$/i.test(f.type || "") || /\.pdf$/i.test(f.nom || "");
+const fiPdfVign = new Map();
+const FI_COULEURS = { DOC: "#2b579a", DOCX: "#2b579a", ODT: "#2b579a", XLS: "#1d6f42", XLSX: "#1d6f42", CSV: "#1d6f42", ODS: "#1d6f42", PPT: "#d24726", PPTX: "#d24726", ZIP: "#6b6f76", PDF: "#c43d2b", TXT: "#5b6d66" };
+const fiCouleur = (f) => FI_COULEURS[fiExt(f)] || "#5b6d66";
+const ICONE_DOC = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>';
+const ICONE_3PTS = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>';
+function fiApercu(f) {
+  const c = fiLiens.get(f.chemin);
+  if (fiImage(f)) return `<img data-fpath="${esc(f.chemin)}" alt="${esc(f.nom)}"${c ? ` src="${esc(c.url)}"` : ""} loading="lazy">`;
+  if (fiPdf(f)) { const v = fiPdfVign.get(f.chemin); return (v ? `<img src="${v}" alt="">` : `<img data-fpdf="${esc(f.chemin)}" alt="" hidden>`) + (v ? "" : `<span class="ficone" data-fsecours><b>PDF</b></span>`); }
+  return `<span class="ficone">${ICONE_DOC}<b>${esc(fiExt(f))}</b></span>`;
 }
+function fiCarte(f) {
+  const fond = fiImage(f) || fiPdf(f) ? "" : ` style="background:${fiCouleur(f)}"`;
+  return `<div class="fcarte"><button class="fprev${fiPdf(f) ? " pdf" : ""}" data-fouvrir="${esc(f.id)}"${fond} aria-label="Ouvrir ${esc(f.nom)}">${fiApercu(f)}</button>
+    <button class="fmenu" data-finfo="${esc(f.id)}" aria-label="Informations sur ${esc(f.nom)}" title="Informations">${ICONE_3PTS}</button>
+    <div class="fpied"><span class="fnom">${esc(f.nom)}</span><span class="fsous"><span>${esc(fiTaille(f.taille || 0))}</span><span>${auteur(f)}</span></span></div></div>`;
+}
+/* miniatures des PDF : première page, dessinée sur place (pdf.js) */
+let fiPdfPret = null; const fiFile = [];
+function fiChargerPdfJs() {
+  if (window.pdfjsLib) return Promise.resolve();
+  return fiPdfPret ??= new Promise((ok, ko) => { const s = document.createElement("script"); s.src = "vendor/pdf.min.js"; s.onload = () => { pdfjsLib.GlobalWorkerOptions.workerSrc = "vendor/pdf.worker.min.js"; ok(); }; s.onerror = () => ko(new Error("pdf.js")); document.head.appendChild(s); });
+}
+async function fiMiniature(f) {
+  try {
+    await fiChargerPdfJs();
+    const doc = await pdfjsLib.getDocument({ url: await fiUrl(f), disableAutoFetch: true, disableStream: false }).promise;
+    const p = await doc.getPage(1), v0 = p.getViewport({ scale: 1 }), k = 360 / v0.width, v = p.getViewport({ scale: k });
+    const c = document.createElement("canvas"); c.width = v.width; c.height = v.height;
+    await p.render({ canvasContext: c.getContext("2d"), viewport: v }).promise;
+    fiPdfVign.set(f.chemin, c.toDataURL("image/jpeg", 0.72)); doc.destroy();
+  } catch (e) { fiPdfVign.set(f.chemin, ""); }
+}
+async function fiMiniaturesPdf() {
+  const im = [...document.querySelectorAll("img[data-fpdf]")];
+  for (const i of im) {
+    const f = S.fichiers.find((x) => x.chemin === i.dataset.fpdf); if (!f || fiPdfVign.has(f.chemin) || fiFile.includes(f.chemin) || (f.taille || 0) > 40 * 1048576) continue;
+    fiFile.push(f.chemin);
+  }
+  if (fiMiniaturesPdf.enCours) return; fiMiniaturesPdf.enCours = true;
+  while (fiFile.length) {
+    const c = fiFile.shift(), f = S.fichiers.find((x) => x.chemin === c); if (!f) continue;
+    await fiMiniature(f); const v = fiPdfVign.get(c);
+    if (v) document.querySelectorAll("img[data-fpdf]").forEach((i) => { if (i.dataset.fpdf === c) { i.src = v; i.hidden = false; const sec = i.parentElement.querySelector("[data-fsecours]"); if (sec) sec.remove(); } });
+  }
+  fiMiniaturesPdf.enCours = false;
+}
+/* fiche d'informations (les trois petits points), visionneuse, téléchargement */
+const fiJour = (t) => t ? new Date(t).toLocaleString("fr-FR", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "";
+async function fiTelecharger(f) {
+  try {
+    let u;
+    if (fiSurHub(f)) u = (await fiUrl(f)) + "&dl=1";
+    else { const { data, error } = await SB.storage.from("documents").createSignedUrl(f.chemin, 600, { download: f.nom }); if (error) throw error; u = data.signedUrl; }
+    const a = document.createElement("a"); a.href = u; a.download = f.nom; document.body.appendChild(a); a.click(); a.remove();
+  } catch (e) { toast("Téléchargement impossible."); }
+}
+function fiInfo(id) {
+  const f = S.fichiers.find((x) => x.id === id); if (!f) return;
+  let d = document.getElementById("finfo"); if (!d) { d = document.createElement("dialog"); d.id = "finfo"; d.className = "finfo"; document.body.appendChild(d); d.addEventListener("click", (e) => { if (e.target === d) d.close(); }); }
+  const c = fiLiens.get(f.chemin), v = fiPdfVign.get(f.chemin), lieu = nomLieu(f.lieu);
+  const ligne = (k, val) => val ? `<dt>${k}</dt><dd>${val}</dd>` : "";
+  d.innerHTML = `<div class="haut"${fiImage(f) || fiPdf(f) ? "" : ` style="background:${fiCouleur(f)}"`}>${fiImage(f) && c ? `<img src="${esc(c.url)}" alt="">` : v ? `<img src="${v}" alt="" style="object-fit:contain;background:#fff">` : `<span class="ficone" style="display:grid;justify-items:center">${ICONE_DOC.replace("<svg", '<svg width="54" height="54"')}<b style="font:800 1.1rem var(--display)">${esc(fiExt(f))}</b></span>`}</div>
+    <div class="corps"><h3>${esc(f.nom)}</h3>
+    ${f.note ? `<div class="desc">${esc(f.note)}</div>` : `<div class="desc" style="color:var(--muted)">Pas encore de description.${S.ecrire ? " Utilise « Modifier »." : ""}</div>`}
+    <dl>${ligne("Ajouté par", auteur(f))}${ligne("Ajouté le", esc(fiJour(f.cree)))}${f.par && crea(f) && f.par !== crea(f) ? ligne("Modifié par", auteur(f)) + ligne("Modifié le", esc(fiJour(f.maj))) : ""}${ligne("Taille", esc(fiTaille(f.taille || 0)))}${ligne("Type", esc(fiExt(f)))}${ligne("Lieu", esc(lieu))}${ligne("Thème", esc(f.theme))}${ligne("Stockage", fiSurHub(f) ? "NAS" : "Supabase")}</dl>
+    <div class="acts"><button class="btn jaune" data-fouvrir="${esc(f.id)}">Ouvrir</button><button class="btn" data-ftelecharger="${esc(f.id)}">Télécharger</button>${S.ecrire ? `<button class="btn" data-fmodifier="${esc(f.id)}">Modifier</button><button class="btn rouge" data-fsuppr="${esc(f.id)}">Supprimer</button>` : ""}<button class="btn" data-ffermer="1" style="margin-left:auto">Fermer</button></div></div>`;
+  nommer(d); d.showModal();
+}
+let fiLight = { liste: [], i: 0 };
+function fiVoir(id) {
+  const imgs = S.fichiers.filter((x) => fiImage(x) && cherche(x, "nom", "note", "theme") && (!S.theme || x.theme === S.theme)).sort((a, b) => (b.cree || 0) - (a.cree || 0));
+  fiLight = { liste: imgs, i: Math.max(0, imgs.findIndex((x) => x.id === id)) };
+  let d = document.getElementById("flight"); if (!d) { d = document.createElement("dialog"); d.id = "flight"; d.className = "flight"; document.body.appendChild(d); d.addEventListener("keydown", (e) => { if (e.key === "ArrowLeft") fiVoirAutre(-1); if (e.key === "ArrowRight") fiVoirAutre(1); }); }
+  fiVoirMaj(); if (!d.open) d.showModal();
+}
+async function fiVoirMaj() {
+  const d = document.getElementById("flight"), f = fiLight.liste[fiLight.i]; if (!f) return d.close();
+  const u = await fiUrl(f).catch(() => "");
+  d.innerHTML = `<div class="bar"><button class="r" data-ffermerlight="1" aria-label="Fermer">✕</button><b>${esc(f.nom)}</b><button class="r" data-finfo="${esc(f.id)}" aria-label="Informations">${ICONE_3PTS.replace("<svg", '<svg width="18" height="18"')}</button></div>
+    <div class="zone"><img src="${esc(u)}" alt="${esc(f.nom)}"></div>${fiLight.liste.length > 1 ? `<button class="r nav g" data-fnav="-1" aria-label="Précédente">‹</button><button class="r nav d" data-fnav="1" aria-label="Suivante">›</button>` : ""}`;
+}
+const fiVoirAutre = (n) => { const l = fiLight.liste.length; if (!l) return; fiLight.i = (fiLight.i + n + l) % l; fiVoirMaj(); };
 /* Dossier privé sur le NAS : deux liens enregistrés pour le site (dépôt = envoi seulement, dossier = lecture). Le site ne se connecte jamais au NAS. */
 const lienOk = (u) => { try { const x = new URL(u); return x.protocol === "https:" || x.protocol === "http:"; } catch (e) { return false; } };
 const nasCarte = () => { const r = reglageSite(), d = r.nas_depot, v = r.nas_voir;
-  return `<div class="depose" style="text-align:left;justify-items:stretch"><b>Dossier partagé (Google Drive, OneDrive, NAS…)</b>
+  return `<details class="depose"${d || v ? " open" : ""}><summary>Dossier partagé (Google Drive, OneDrive, NAS…)</summary>
   ${d || v ? `<div style="display:flex;flex-wrap:wrap;gap:8px">${d ? `<a class="btn jaune" href="${esc(d)}" target="_blank" rel="noopener noreferrer">Ajouter des fichiers</a>` : ""}${v ? `<a class="btn" href="${esc(v)}" target="_blank" rel="noopener noreferrer">Ouvrir le dossier</a>` : ""}</div>` : `<span class="quota">Pour de gros volumes : colle ici le lien d'un dossier partagé (au-delà de 1 Go, c'est la solution la plus simple).</span>`}
-  ${S.ecrire && db ? `<div><button class="btn" data-nasconf="1">${d || v ? "Changer les liens" : "Enregistrer les liens du dossier"}</button></div>` : ""}</div>`; };
+  ${S.ecrire && db ? `<div><button class="btn" data-nasconf="1">${d || v ? "Changer les liens" : "Enregistrer les liens du dossier"}</button></div>` : ""}</details>`; };
 document.addEventListener("click", async (e) => {
   if (!e.target.closest("[data-nasconf]")) return;
   const r = reglageSite(), a = prompt("Lien pour AJOUTER des fichiers (dossier partagé en mode « éditeur »). Laisse vide pour l'effacer :", r.nas_depot || "");
@@ -94,7 +196,7 @@ VUES.fichiers = () => {
   const l = S.fichiers.filter((x) => cherche(x, "nom", "note", "theme") && (!S.theme || x.theme === S.theme)).sort((a, b) => (b.cree || 0) - (a.cree || 0));
   const total = S.fichiers.reduce((s, x) => s + (x.taille || 0), 0);
   return `<div class="tete"><h1>Fichiers<small>PDF, documents, tableurs, photos : tout au même endroit</small></h1></div>
-  ${S.ecrire && db ? `<div class="depose" id="depose"><span>Glisse des fichiers ici, ou</span><label class="btn jaune" style="cursor:pointer">${ic("i-plus", 14)}Ajouter des fichiers<input type="file" id="fiFichiers" multiple hidden></label><span class="quota">${HUB ? "Stockage sur le NAS, " + fiMaxTxt() + " maximum par fichier" : "50 Mo maximum par fichier"} · ${esc(fiTaille(total))} déjà déposés ici</span></div>` : ""}
+  ${S.ecrire && db ? `<div class="depose" id="depose"><span class="glisse">Glisse des fichiers ici, ou</span><label class="btn jaune" style="cursor:pointer">${ic("i-plus", 14)}Ajouter des fichiers<input type="file" id="fiFichiers" multiple hidden></label><span class="quota">${HUB ? "Stockage sur le NAS, " + fiMaxTxt() + " maximum par fichier" : "50 Mo maximum par fichier"} · ${esc(fiTaille(total))} déjà déposés ici</span></div>` : ""}
   ${nasCarte()}
   ${themes.length ? `<div class="puces">${[["", "Tout"], ...themes.map((x) => [x, x])].map(([k, v]) => `<button data-theme="${esc(k)}" aria-pressed="${S.theme === k}">${esc(v)}</button>`).join("")}</div>` : ""}
   ${l.length ? `<div class="fichiers">${l.map(fiCarte).join("")}</div>` : vide("Aucun fichier pour l'instant. Dépose un PDF, un tableur, une photo…")}`;
@@ -124,10 +226,26 @@ document.addEventListener("dragover", (e) => { const z = e.target.closest && e.t
 document.addEventListener("dragleave", (e) => { const z = e.target.closest && e.target.closest("#depose"); if (z) z.classList.remove("survol"); });
 document.addEventListener("drop", (e) => { const z = e.target.closest && e.target.closest("#depose"); if (!z) return; e.preventDefault(); z.classList.remove("survol"); if (e.dataTransfer.files.length && S.ecrire && db) fiEnvoyer(e.dataTransfer.files); });
 document.addEventListener("click", async (e) => {
-  const b = e.target.closest("[data-fouvrir]"); if (!b) return;
-  const f = S.fichiers.find((x) => x.id === b.dataset.fouvrir); if (!f) return;
-  const w = window.open("", "_blank");
-  try { const u = await fiUrl(f); if (w) w.location = u; else location.href = u; }
-  catch (x) { if (w) w.close(); toast("Impossible d'ouvrir ce fichier."); }
+  const t = e.target.closest("[data-fouvrir],[data-finfo],[data-ftelecharger],[data-fmodifier],[data-fsuppr],[data-ffermer],[data-ffermerlight],[data-fnav]"); if (!t) return;
+  const dd = t.dataset, f = S.fichiers.find((x) => x.id === (dd.fouvrir || dd.finfo || dd.ftelecharger || dd.fmodifier || dd.fsuppr));
+  if (dd.ffermer) return document.getElementById("finfo").close();
+  if (dd.ffermerlight) return document.getElementById("flight").close();
+  if (dd.fnav) return fiVoirAutre(+dd.fnav);
+  if (dd.finfo) { if (f) fiInfo(f.id); return; }
+  if (!f) return;
+  if (dd.ftelecharger) return fiTelecharger(f);
+  if (dd.fmodifier) { document.getElementById("finfo").close(); return ouvrir("fichiers", f.id, {}); }
+  if (dd.fsuppr) {
+    if (!confirm("Supprimer « " + f.nom + " » pour tout le groupe ?")) return;
+    try { await db.collection("fichiers").doc(f.id).delete(); await fiSupprimer(f); document.getElementById("finfo").close(); toast("Fichier supprimé"); } catch (x) { refus(x); }
+    return;
+  }
+  if (dd.fouvrir) {
+    const fi = document.getElementById("finfo"); if (fi && fi.open) fi.close();
+    if (fiImage(f)) return fiVoir(f.id);
+    const w = window.open("", "_blank");
+    try { const u = await fiUrl(f); if (w) w.location = u; else location.href = u; }
+    catch (x) { if (w) w.close(); toast("Impossible d'ouvrir ce fichier."); }
+  }
 });
-new MutationObserver(() => { if (S.vue === "fichiers") fiVignettes(); }).observe(document.getElementById("vue"), { childList: true });
+new MutationObserver(() => { if (S.vue === "fichiers") { fiVignettes(); fiMiniaturesPdf(); } }).observe(document.getElementById("vue"), { childList: true });
