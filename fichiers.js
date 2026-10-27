@@ -77,16 +77,16 @@ function fiCarte(f) {
 /* Dossier privé sur le NAS : deux liens enregistrés pour le site (dépôt = envoi seulement, dossier = lecture). Le site ne se connecte jamais au NAS. */
 const lienOk = (u) => { try { const x = new URL(u); return x.protocol === "https:" || x.protocol === "http:"; } catch (e) { return false; } };
 const nasCarte = () => { const r = reglageSite(), d = r.nas_depot, v = r.nas_voir;
-  return `<div class="depose" style="text-align:left;justify-items:stretch"><b>Dossier privé sur le NAS</b>
-  ${d || v ? `<div style="display:flex;flex-wrap:wrap;gap:8px">${d ? `<a class="btn jaune" href="${esc(d)}" target="_blank" rel="noopener noreferrer">Déposer sur le NAS</a>` : ""}${v ? `<a class="btn" href="${esc(v)}" target="_blank" rel="noopener noreferrer">Ouvrir le dossier du NAS</a>` : ""}</div>` : `<span class="quota">Aucun lien enregistré pour ce site.</span>`}
-  ${S.ecrire && db ? `<div><button class="btn" data-nasconf="1">${d || v ? "Changer les liens" : "Enregistrer les liens du NAS"}</button></div>` : ""}</div>`; };
+  return `<div class="depose" style="text-align:left;justify-items:stretch"><b>Dossier partagé (Google Drive, OneDrive, NAS…)</b>
+  ${d || v ? `<div style="display:flex;flex-wrap:wrap;gap:8px">${d ? `<a class="btn jaune" href="${esc(d)}" target="_blank" rel="noopener noreferrer">Ajouter des fichiers</a>` : ""}${v ? `<a class="btn" href="${esc(v)}" target="_blank" rel="noopener noreferrer">Ouvrir le dossier</a>` : ""}</div>` : `<span class="quota">Pour de gros volumes : colle ici le lien d'un dossier partagé (au-delà de 1 Go, c'est la solution la plus simple).</span>`}
+  ${S.ecrire && db ? `<div><button class="btn" data-nasconf="1">${d || v ? "Changer les liens" : "Enregistrer les liens du dossier"}</button></div>` : ""}</div>`; };
 document.addEventListener("click", async (e) => {
   if (!e.target.closest("[data-nasconf]")) return;
-  const r = reglageSite(), a = prompt("Lien de DÉPÔT du NAS (envoi seulement). Laisse vide pour l'effacer :", r.nas_depot || "");
-  if (a === null) return; const v = prompt("Lien du DOSSIER du NAS (lecture). Laisse vide pour l'effacer :", r.nas_voir || ""); if (v === null) return;
+  const r = reglageSite(), a = prompt("Lien pour AJOUTER des fichiers (dossier partagé en mode « éditeur »). Laisse vide pour l'effacer :", r.nas_depot || "");
+  if (a === null) return; const v = prompt("Lien pour CONSULTER le dossier (mode « lecteur »). Laisse vide pour l'effacer :", r.nas_voir || ""); if (v === null) return;
   if ((a.trim() && !lienOk(a.trim())) || (v.trim() && !lienOk(v.trim()))) return toast("Ces liens doivent commencer par https://");
   const { id, ...reste } = r;
-  try { await db.collection("sites").doc(S.site).set({ ...reste, nas_depot: a.trim(), nas_voir: v.trim(), par: S.moi, maj: Date.now() }); toast("Liens du NAS enregistrés"); } catch (x) { refus(x); }
+  try { await db.collection("sites").doc(S.site).set({ ...reste, nas_depot: a.trim(), nas_voir: v.trim(), par: S.moi, maj: Date.now() }); toast("Liens du dossier enregistrés"); } catch (x) { refus(x); }
 });
 VUES.fichiers = () => {
   const themes = [...new Set(S.fichiers.map((m) => m.theme).filter(Boolean))].sort();
