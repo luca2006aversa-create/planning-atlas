@@ -333,6 +333,7 @@ body{margin:0}img{max-width:100%}[hidden]{display:none!important}
   <div class="entete">
     <img class="logo" src="logo2.svg" alt="" width="34" height="34"><div class="marque"><b>Planning <span>Atlas</span></b><small id="sousTitre">Workshop S5 · Hanoï</small></div>
     <div class="onglets" id="ongletsHaut"></div>
+    <button class="moi mob" data-vue="compte" aria-label="Compte rendu"><svg width="16" height="16"><use href="#i-cr"/></svg></button>
     <button class="moi mob" data-vue="fichiers" aria-label="Fichiers"><svg width="16" height="16"><use href="#i-fich"/></svg></button>
     <button class="moi mob" data-vue="consignes" aria-label="Consignes"><svg width="16" height="16"><use href="#i-con"/></svg></button>
     <button class="moi" id="installer" hidden>Installer l'appli</button>
@@ -949,6 +950,7 @@ function etat(ok,t){const e=$("#etat");e.classList.toggle("ok",ok);e.querySelect
 <script src="micro.js"></script>
 <script src="extras.js"></script>
 <script src="fichiers.js"></script>
+<script src="compte.js"></script>
 <script src="exports.js"></script>
 <script src="sb.js"></script>
 </body></html>

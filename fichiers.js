@@ -269,4 +269,4 @@ document.addEventListener("click", async (e) => {
     catch (x) { if (w) w.close(); toast("Impossible d'ouvrir ce fichier."); }
   }
 });
-new MutationObserver(() => { if (S.vue === "fichiers") { fiVignettes(); fiMiniaturesPdf(); } }).observe(document.getElementById("vue"), { childList: true });
+new MutationObserver(() => { if (S.vue === "fichiers" || S.vue === "compte") { fiVignettes(); if (S.vue === "fichiers") fiMiniaturesPdf(); } }).observe(document.getElementById("vue"), { childList: true });
