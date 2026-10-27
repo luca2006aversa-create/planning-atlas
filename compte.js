@@ -53,7 +53,7 @@ function crDonnees(d) {
 }
 const crFicheHtml = (r, i, n) => {
   const lignes = Object.entries(r.rep || {}).map(([qid, x]) => `<p><b>${esc(crQuestion(qid, x))}</b><br>${x.v === "oui" ? "Oui" : x.v === "non" ? "Non" : x.v === "autre" && !x.autre ? "Autre" : esc(x.v || "")}${x.autre ? ` : ${esc(x.autre)}` : ""}</p>`).join("");
-  return `<details><summary>Entretien ${n - i} · ${esc(crHeure(r.quand))}${r.lieu ? ` · ${esc(r.lieu)}` : ""}${r.profil ? ` · ${esc(r.profil)}` : ""}</summary><div class="cr-qr">${lignes || '<p class="cr-vide">Fiche vide</p>'}</div></details>`;
+  return `<details><summary>Entretien ${n - i} · ${esc(crHeure(r.quand))}${r.lieu ? ` · ${esc(r.lieu)}` : ""}${r.profil ? ` · ${esc(r.profil)}` : ""}</summary><div class="cr-qr">${r.texte_libre ? `<p style="white-space:pre-wrap">${esc(r.texte_libre)}</p>` : ""}${lignes || (r.texte_libre ? "" : '<p class="cr-vide">Fiche vide</p>')}</div></details>`;
 };
 function crPhotos(D) {
   const mur = D.photosMur.map((m) => `<figure><img src="${esc(photoUrl(m.photo))}" alt="" loading="lazy"><figcaption>${esc(m.texte || "")}${m.cap != null ? ` · vers ${cap8(m.cap)}` : ""}</figcaption></figure>`);
@@ -102,7 +102,7 @@ function crTexte(d, D) {
   sec("Emploi du temps", D.creneaux.map((c) => `- ${c.debut || "—"}${c.fin ? "–" + c.fin : ""} ${c.titre} (${TYPES[typeDe(c)]})${c.lieu ? ", " + c.lieu : ""}${c.qui ? ", " + c.qui : ""}`));
   sec("Tâches terminées", D.tachesFaites.map((t) => `- ${t.titre}${t.responsable ? " (" + t.responsable + ")" : ""}`));
   sec("Tâches mises à jour", D.tachesMaj.map((t) => `- ${t.titre} : ${STATUTS[statutDe(t)]}`));
-  sec("Entretiens", D.reponses.map((r, i) => `Entretien ${i + 1} (${crHeure(r.quand)}${r.lieu ? ", " + r.lieu : ""}${r.profil ? ", " + r.profil : ""})\n` + Object.entries(r.rep || {}).map(([q, x]) => `  · ${crQuestion(q, x)} → ${x.v}${x.autre ? " : " + x.autre : ""}`).join("\n")));
+  sec("Entretiens", D.reponses.map((r, i) => `Entretien ${i + 1} (${crHeure(r.quand)}${r.lieu ? ", " + r.lieu : ""}${r.profil ? ", " + r.profil : ""})\n` + (r.texte_libre ? "  " + r.texte_libre.replace(/\n/g, "\n  ") + "\n" : "") + Object.entries(r.rep || {}).map(([q, x]) => `  · ${crQuestion(q, x)} → ${x.v}${x.autre ? " : " + x.autre : ""}`).join("\n")));
   sec("Notes", D.notesTexte.map((m) => `- ${m.texte}`));
   sec("Photos", [`${crPhotos(D).length} photo(s) du jour`]);
   sec("Fichiers ajoutés", [...(D.fichiers.some(fiImage) ? [`- ${D.fichiers.filter(fiImage).length} photo(s) déposée(s)`] : []), ...D.fichiers.filter((f) => !fiImage(f)).map((f) => `- ${f.nom}`)]);
@@ -117,7 +117,7 @@ async function crPdf(d, D) {
   ${cr.resume ? `<h2>Résumé de la journée</h2><p class="t">${exHtml(cr.resume)}</p>` : ""}${cr.demain ? `<h2>À retenir et pour demain</h2><p class="t">${exHtml(cr.demain)}</p>` : ""}
   <h2>Emploi du temps</h2>${li(D.creneaux.map((c) => `<b>${exHtml(c.debut || "—")}${c.fin ? "–" + exHtml(c.fin) : ""}</b> ${exHtml(c.titre)} <i>(${exHtml(TYPES[typeDe(c)])})</i>${c.lieu || c.qui ? `<br><span class="m">${exHtml([c.lieu, c.qui].filter(Boolean).join(" · "))}</span>` : ""}`))}
   <h2>Tâches</h2>${li([...D.tachesFaites.map((t) => `✓ ${exHtml(t.titre)}${t.responsable ? ` <span class="m">(${exHtml(t.responsable)})</span>` : ""}`), ...D.tachesMaj.map((t) => `${exHtml(t.titre)} <span class="m">: ${exHtml(STATUTS[statutDe(t)])}</span>`)])}
-  <h2>Entretiens (${D.reponses.length})</h2>${D.reponses.map((r, i) => `<div class="q"><b>Entretien ${i + 1}</b> · ${exHtml(crHeure(r.quand))}${r.lieu ? " · " + exHtml(r.lieu) : ""}${r.profil ? " · " + exHtml(r.profil) : ""}${Object.entries(r.rep || {}).map(([q, x]) => `<br><span class="m">${exHtml(crQuestion(q, x))}</span> → ${exHtml(x.v || "")}${x.autre ? " : " + exHtml(x.autre) : ""}`).join("")}</div>`).join("") || `<p class="v">Aucun entretien.</p>`}
+  <h2>Entretiens (${D.reponses.length})</h2>${D.reponses.map((r, i) => `<div class="q"><b>Entretien ${i + 1}</b> · ${exHtml(crHeure(r.quand))}${r.lieu ? " · " + exHtml(r.lieu) : ""}${r.profil ? " · " + exHtml(r.profil) : ""}${r.texte_libre ? `<br><span class="t">${exHtml(r.texte_libre)}</span>` : ""}${Object.entries(r.rep || {}).map(([q, x]) => `<br><span class="m">${exHtml(crQuestion(q, x))}</span> → ${exHtml(x.v || "")}${x.autre ? " : " + exHtml(x.autre) : ""}`).join("")}</div>`).join("") || `<p class="v">Aucun entretien.</p>`}
   <h2>Notes</h2>${li(D.notesTexte.map((m) => exHtml(m.texte)))}
   <h2>Photos (${photos.length})</h2>${photos.length ? `<div class="ph">${photos.map((p) => `<figure><img src="${exHtml(p.u)}"><figcaption>${exHtml(p.t)}</figcaption></figure>`).join("")}</div>` : `<p class="v">Aucune photo.</p>`}
   <h2>Fichiers ajoutés</h2>${li([...(D.fichiers.some(fiImage) ? [`${D.fichiers.filter(fiImage).length} photo(s) déposée(s)${D.fichiers.filter(fiImage).length > photos.length ? ` (${photos.length} affichées ci-dessus)` : ""}`] : []), ...D.fichiers.filter((f) => !fiImage(f)).map((f) => exHtml(f.nom))])}`;
