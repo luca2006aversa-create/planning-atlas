@@ -116,6 +116,11 @@ h2{font:700 .8rem var(--display);letter-spacing:.12em;text-transform:uppercase;c
 .col7 .creneau .signe{grid-column:1}
 .col7 .creneau .titre{display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:break-word;hyphens:auto}
 .col7 .creneau .meta{min-width:0}
+.annexe{display:flex;gap:8px;align-items:center;width:100%;text-align:left;background:transparent;border:1px dashed var(--line);border-radius:10px;padding:6px 10px;font-size:.84rem;color:var(--ink);min-width:0}
+.annexe:hover{border-color:var(--muted)}.annexe .ah{font-weight:700;min-width:38px;color:var(--muted);font-variant-numeric:tabular-nums}.annexe .ah:empty{display:none}.annexe .ah,.annexe .ai{flex:none}
+.annexe .ai{color:var(--muted);display:grid}.annexe .at{overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow-wrap:anywhere;min-width:0}
+.annexe img{width:30px;height:30px;border-radius:6px;object-fit:cover;flex:none}.annexe.fait .at{text-decoration:line-through;opacity:.6}
+.col7 .annexe{padding:5px 7px;font-size:.78rem;gap:6px}.col7 .annexe .ah{min-width:0}
 .creneau.passe{opacity:.55}
 .creneau.encours{border-color:var(--jaune);box-shadow:0 0 0 2px var(--jaune)}
 .badge{font-size:.7rem;font-weight:800;border-radius:999px;padding:1px 8px;background:var(--jaune);color:var(--on-jaune);text-transform:none;letter-spacing:0}
@@ -394,9 +399,9 @@ const FORMS={
     ["consignes","Consignes et matériel","textarea",0,null,"Rendez-vous, matériel à prendre, ce qu'on doit rapporter…"]]},
   taches:{nom:"Tâche",champs:[
     ["titre","Tâche","text",1],["statut","Statut","choix",0,STATUTS],["responsable","Responsable","text"],
-    ["echeance","Échéance","date"],["theme","Thème ou groupe","text",0,null,"ex. BG1, TS3, commun"],["detail","Détail","textarea"]]},
+    ["echeance","Jour / échéance","date"],["heure","Heure (facultatif)","time"],["theme","Thème ou groupe","text",0,null,"ex. BG1, TS3, commun"],["detail","Détail","textarea"]]},
   mur:{nom:"Note ou photo",champs:[
-    ["photo","Photo","photo"],["texte","Description","textarea",0,null,"Ce qu'on voit, ce qu'on a observé…"],["lieu","Lieu associé","lieu"],["theme","Thème","text"],["epingle","Épingler sur « Aujourd'hui »","checkbox"]]},
+    ["photo","Photo","photo"],["texte","Description","textarea",0,null,"Ce qu'on voit, ce qu'on a observé…"],["lieu","Lieu associé","lieu"],["theme","Thème","text"],["jour","Jour (pour l'afficher dans l'emploi du temps)","date"],["heure","Heure (facultatif)","time"],["epingle","Épingler sur « Aujourd'hui »","checkbox"]]},
   lieux:{nom:"Lieu",champs:[["nom","Nom du lieu","text",1,null,"ex. Rampe du marché"],["note","Notes sur ce lieu","textarea",0,null,"Ambiance, usages, ce qui change selon l'heure ou le niveau de l'eau…"]]},
   traces:{nom:"Trajet",champs:[["nom","Nom du trajet","text",1]]},
   questions:{nom:"Question",champs:[["texte","Question (français)","textarea",1],["texte_vi","Question en vietnamien (facultatif)","textarea",0,null,"Câu hỏi bằng tiếng Việt"],["type","Type","choix",0,QTYPES]]},
@@ -510,6 +515,20 @@ function post(m){
 const vide=(txt,col,lab,date)=>`<div class="vide">${txt}${col&&S.ecrire?`<br><button class="btn" data-ouvrir="${col}"${date?` data-date="${date}"`:""}>${ic("i-plus",14)}${lab}</button>`:""}</div>`;
 const bascMoi=()=>monPseudo()?`<div class="seg" role="group" aria-label="Afficher"><button data-moiseul="0" aria-pressed="${!S.moiSeul}">Tout le groupe</button><button data-moiseul="1" aria-pressed="${S.moiSeul}">Moi (${esc(monPseudo())})</button></div>`:"";
 
+/* notes, photos, fichiers et tâches rattachés à un jour : affichés sous les créneaux de ce jour */
+function annexe(a){
+  const ico=a.k==="tache"?(a.fait?"i-ok":"i-tac"):a.k==="fichier"?"i-fich":"i-mur";
+  return `<button class="annexe ${a.k}${a.fait?" fait":""}" ${a.fi?`data-finfo="${esc(a.id)}"`:`data-ouvrir="${a.col}" data-id="${esc(a.id)}"`} title="${a.k==="tache"?"Tâche":a.k==="fichier"?"Fichier":a.k==="photo"?"Photo":"Note"}"><span class="ah">${esc(a.h||"")}</span>${a.img?`<img src="${esc(photoUrl(a.img))}" alt="" loading="lazy">`:`<span class="ai">${ic(ico,14)}</span>`}<span class="at">${esc(a.t)}</span></button>`;
+}
+function annexes(date,{taches=true}={}){
+  if(S.type)return "";
+  const a=[];
+  for(const m of S.mur)if(m.jour===date&&cherche(m,"texte","theme"))a.push({k:m.photo?"photo":"note",h:m.heure,col:"mur",id:m.id,t:m.texte||(m.photo?"Photo":"Note"),img:m.photo});
+  if(taches)for(const t of S.taches)if(t.echeance===date&&cherche(t,"titre","responsable","theme")&&(!S.moiSeul||estMoi(t.responsable)||/tous/i.test(t.responsable||"")))a.push({k:"tache",h:t.heure,col:"taches",id:t.id,t:t.titre+(t.responsable?" · "+t.responsable:""),fait:statutDe(t)==="fait"});
+  for(const f of (S.fichiers||[]))if(f.jour===date&&cherche(f,"nom","note","theme"))a.push({k:"fichier",h:f.heure,fi:true,id:f.id,t:f.nom});
+  a.sort((x,y)=>(x.h||"99").localeCompare(y.h||"99"));
+  return a.map(annexe).join("");
+}
 /* ---------- vues ---------- */
 const VUES={
   auj(){
@@ -522,8 +541,8 @@ const VUES={
     return `<div class="tete"><h1>${esc(fmt(j,{weekday:"long",day:"numeric",month:"long"}))}<small>${monPseudo()?`Bonjour ${esc(monPseudo())} · `:""}${cr.length?`${cr.length} créneau${cr.length>1?"x":""} aujourd'hui`:"Rien de prévu aujourd'hui"}${ta.length?` · ${ta.length} tâche${ta.length>1?"s":""} à suivre`:""}</small></h1>${bascMoi()}</div>
     <div class="grille">
       <div class="pile">
-        <div class="section"><h2>Aujourd'hui</h2><div class="liste">${cr.map(c=>carteCreneau(c,{etat:true})).join("")||vide("Aucun créneau aujourd'hui.","creneaux","Ajouter un créneau",j)}</div></div>
-        <div class="section"><h2>Demain · ${esc(fmt(dem,{weekday:"long",day:"numeric"}))}</h2><div class="liste">${crD.map(c=>carteCreneau(c)).join("")||`<p class="vide">Rien de prévu demain.</p>`}</div></div>
+        <div class="section"><h2>Aujourd'hui</h2><div class="liste">${cr.map(c=>carteCreneau(c,{etat:true})).join("")||(annexes(j,{taches:false})?"":vide("Aucun créneau aujourd'hui.","creneaux","Ajouter un créneau",j))}${annexes(j,{taches:false})}</div></div>
+        <div class="section"><h2>Demain · ${esc(fmt(dem,{weekday:"long",day:"numeric"}))}</h2><div class="liste">${crD.map(c=>carteCreneau(c)).join("")||(annexes(dem,{taches:false})?"":`<p class="vide">Rien de prévu demain.</p>`)}${annexes(dem,{taches:false})}</div></div>
       </div>
       <div class="pile">
         <div class="section"><h2>${S.moiSeul?"Mes tâches":"Tâches"} en cours ou pour demain</h2><div class="liste">${ta.map(carteTache).join("")||`<p class="vide">Aucune tâche urgente.</p>`}</div></div>
@@ -544,10 +563,10 @@ const VUES={
     ${puces}
     <div class="mobile-sem">
       <div class="bande">${jours.map(s=>`<button data-jour="${s}" aria-pressed="${s===S.jour}" class="${s===j?"auj":""} ${du(s).length?"a":""}" aria-label="${esc(fmt(s,{weekday:"long",day:"numeric"}))}"><small>${esc(fmt(s,{weekday:"short"}).replace(".",""))}</small><b>${parse(s).getDate()}</b><i></i></button>`).join("")}</div>
-      <div class="section"><h2>${esc(fmt(S.jour,{weekday:"long",day:"numeric",month:"long"}))}</h2><div class="liste">${du(S.jour).map(c=>carteCreneau(c,{etat:true})).join("")||vide("Rien de prévu ce jour-là.","creneaux","Ajouter un créneau",S.jour)}</div></div>
+      <div class="section"><h2>${esc(fmt(S.jour,{weekday:"long",day:"numeric",month:"long"}))}</h2><div class="liste">${du(S.jour).map(c=>carteCreneau(c,{etat:true})).join("")||(annexes(S.jour)?"":vide("Rien de prévu ce jour-là.","creneaux","Ajouter un créneau",S.jour))}${annexes(S.jour)}</div></div>
     </div>
     <div class="sept">${jours.map(s=>`<div class="col7${s===j?" auj":""}"><div class="j"><b>${parse(s).getDate()}</b><small>${esc(fmt(s,{weekday:"long"}))}</small></div>
-      ${du(s).map(c=>carteCreneau(c,{etat:true})).join("")}<button class="ajout" data-ouvrir="creneaux" data-date="${s}">+ Ajouter</button></div>`).join("")}</div>`;
+      ${du(s).map(c=>carteCreneau(c,{etat:true})).join("")}${annexes(s)}<button class="ajout" data-ouvrir="creneaux" data-date="${s}">+ Ajouter</button></div>`).join("")}</div>`;
   },
   taches(){
     const t=S.taches.filter(x=>cherche(x,"titre","responsable","theme","detail")&&(!S.moiSeul||estMoi(x.responsable)));
@@ -797,8 +816,8 @@ function ouvrir(col,id,defaut){
     :`<div class="champ"><label for="${idc}">${lab}${req?" *":""}</label><input type="${type}" id="${idc}" value="${esc(v)}"${req?" required":""}${liste} placeholder="${esc(aide||"")}"${k==="pseudo"?' maxlength="30" autocomplete="nickname"':""}></div>`;
   }
   let corps=col==="creneaux"?ch.titre+ch.type+`<div class="duo trois">${ch.date}${ch.debut}${ch.fin}</div>`+ch.lieu+ch.qui+ch.consignes
-    :col==="taches"?ch.titre+ch.statut+`<div class="duo">${ch.responsable}${ch.echeance}</div>`+ch.theme+ch.detail
-    :Object.values(ch).join("");
+    :col==="taches"?ch.titre+ch.statut+`<div class="duo trois">${ch.responsable}${ch.echeance}${ch.heure}</div>`+ch.theme+ch.detail
+    :Object.entries(ch).map(([k,v])=>k==="jour"?`<div class="duo">${v}${ch.heure}</div>`:k==="heure"?"":v).join("");
   if(col==="lieux"&&id){const ph=S.mur.filter(m=>m.lieu===id&&m.photo);corps+=`<div class="champ"><span class="l">Photos de ce lieu · ${ph.length}</span>${ph.length?`<div class="galerie">${ph.map(m=>`<img src="${esc(photoUrl(m.photo))}" alt="${esc(m.texte||"Photo")}" title="${esc(m.texte||"")}">`).join("")}</div>`:`<span class="qui">Associe des photos à ce lieu depuis le Mur (champ « Lieu associé »).</span>`}</div>`}
   if(col==="traces"&&o.debut)corps+=`<span class="qui">Enregistré du ${esc(quand(Date.parse(o.debut)))} au ${esc(quand(Date.parse(o.fin)))} · ${(o.pts||[]).length/2} points</span>`;
   const titre=col==="membres"?(monPseudo()?"Changer d'identifiant":"Qui es-tu ?"):`${id||col==="consignes"&&o.texte?"Modifier":"Nouveau"} · ${f.nom.toLowerCase()}`;

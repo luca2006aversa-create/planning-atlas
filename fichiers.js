@@ -7,7 +7,7 @@ ONGLETS.splice(7, 0, ["fichiers", "Fichiers", null, "i-fich"]);
 FAB.fichiers = "";
 FORMS.fichiers = { nom: "Fichier", champs: [
   ["nom", "Nom du fichier", "text", 1], ["theme", "Thème", "text", 0, null, "ex. Crues, Agriculture, Cartes, Entretiens"],
-  ["lieu", "Lieu associé", "lieu"], ["note", "Description", "textarea", 0, null, "De quoi s'agit-il, d'où vient-il, à quoi il sert…"]] };
+  ["lieu", "Lieu associé", "lieu"], ["jour", "Jour (pour l'afficher dans l'emploi du temps)", "date"], ["heure", "Heure (facultatif)", "time"], ["note", "Description", "textarea", 0, null, "De quoi s'agit-il, d'où vient-il, à quoi il sert…"]] };
 document.querySelector("svg defs, svg")?.insertAdjacentHTML("beforeend",
   `<symbol id="i-fich" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>`);
 const fiCss = document.createElement("style");
@@ -177,7 +177,7 @@ function fiInfo(id) {
   d.innerHTML = `<div class="haut"${fiImage(f) || fiPdf(f) ? "" : ` style="background:${fiCouleur(f)}"`}>${fiImage(f) && c ? `<img src="${esc(c.url)}" alt="">` : v ? `<img src="${v}" alt="" style="object-fit:contain;background:#fff">` : `<span class="ficone" style="display:grid;justify-items:center">${ICONE_DOC.replace("<svg", '<svg width="54" height="54"')}<b style="font:800 1.1rem var(--display)">${esc(fiExt(f))}</b></span>`}</div>
     <div class="corps"><h3>${esc(f.nom)}</h3>
     ${f.note ? `<div class="desc">${esc(f.note)}</div>` : `<div class="desc" style="color:var(--muted)">Pas encore de description.${S.ecrire ? " Utilise « Modifier »." : ""}</div>`}
-    <dl>${ligne("Ajouté par", auteur(f))}${ligne("Ajouté le", esc(fiJour(f.cree)))}${f.par && crea(f) && f.par !== crea(f) ? ligne("Modifié par", auteur(f)) + ligne("Modifié le", esc(fiJour(f.maj))) : ""}${ligne("Taille", esc(fiTaille(f.taille || 0)))}${ligne("Type", esc(fiExt(f)))}${ligne("Lieu", esc(lieu))}${ligne("Thème", esc(f.theme))}${ligne("Stockage", fiSurHub(f) ? "NAS" : "Supabase")}</dl>
+    <dl>${ligne("Ajouté par", auteur(f))}${ligne("Ajouté le", esc(fiJour(f.cree)))}${f.par && crea(f) && f.par !== crea(f) ? ligne("Modifié par", auteur(f)) + ligne("Modifié le", esc(fiJour(f.maj))) : ""}${ligne("Taille", esc(fiTaille(f.taille || 0)))}${ligne("Type", esc(fiExt(f)))}${ligne("Pour le jour", f.jour ? esc(fmt(f.jour, { weekday: "long", day: "numeric", month: "long" }) + (f.heure ? " à " + f.heure : "")) : "")}${ligne("Lieu", esc(lieu))}${ligne("Thème", esc(f.theme))}${ligne("Stockage", fiSurHub(f) ? "NAS" : "Supabase")}</dl>
     <div class="acts"><button class="btn jaune" data-fouvrir="${esc(f.id)}">Ouvrir</button><button class="btn" data-ftelecharger="${esc(f.id)}">Télécharger</button>${S.ecrire ? `<button class="btn" data-fmodifier="${esc(f.id)}">Modifier</button><button class="btn rouge" data-fsuppr="${esc(f.id)}">Supprimer</button>` : ""}<button class="btn" data-ffermer="1" style="margin-left:auto">Fermer</button></div></div>`;
   nommer(d); d.showModal();
 }

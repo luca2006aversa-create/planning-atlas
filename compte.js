@@ -36,7 +36,8 @@ const crDoc = (d) => S.comptes.find((x) => x.id === crId(d)) || {};
 const crQuestion = (id, r) => (r && r.q) || (S.questions.find((q) => q.id === id) || {}).texte || "Question";
 function crDonnees(d) {
   const tri = (a, c) => a.sort((x, y) => (x[c] || 0) - (y[c] || 0));
-  const notes = tri(S.mur.filter((m) => crJour(m.cree) === d), "cree");
+  const duJour = (o) => o.jour ? o.jour === d : crJour(o.cree) === d;
+  const notes = tri(S.mur.filter(duJour), "cree");
   return {
     creneaux: S.creneaux.filter((c) => c.date === d).sort(parHeure),
     tachesFaites: S.taches.filter((t) => statutDe(t) === "fait" && crJour(t.maj) === d),
@@ -44,7 +45,7 @@ function crDonnees(d) {
     notes, photosMur: notes.filter((m) => m.photo),
     notesTexte: notes.filter((m) => m.texte),
     reponses: tri(S.reponses.filter((r) => crJour(r.quand) === d), "quand"),
-    fichiers: tri(S.fichiers.filter((f) => crJour(f.cree) === d), "cree"),
+    fichiers: tri(S.fichiers.filter(duJour), "cree"),
     traces: S.traces.filter((t) => crJour(t.cree) === d || crJour(t.debut) === d),
     lieux: S.lieux.filter((l) => crJour(l.cree) === d),
     tableau: S.tableau.filter((x) => x.k !== "trait" && x.k !== "lien" && crJour(x.cree) === d),
