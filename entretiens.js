@@ -45,6 +45,12 @@ const peLigne = (r) => [r.profil, r.age ? r.age + " ans" : "", r.lieu].filter(Bo
 const peNbRep = (r) => Object.values(r.rep || {}).filter((x) => x && (x.v || x.autre)).length + (r.qr || []).filter((x) => x.q || x.r).length;
 const pePieces = (id) => S.fichiers.filter((f) => f.personne === id);
 const peJourTxt = (r) => r.quand ? new Date(r.quand).toLocaleDateString("fr-FR", { day: "numeric", month: "short" }) : "";
+const peNum = (t) => String(t || "").replace(/[^\d+]/g, "");
+function peCoord(r) {
+  const l = (nom, val, lien, copie) => val ? `<dt>${nom}</dt><dd>${lien ? `<a href="${esc(lien)}" target="_blank" rel="noopener noreferrer" style="color:inherit;font-weight:600">${esc(val)}</a>` : esc(val)}${copie ? ` <button class="btn" data-pcopie="${esc(copie)}" style="padding:2px 9px;font-size:.75rem">Copier</button>` : ""}</dd>` : "";
+  const z = peNum(r.zalo), t = peNum(r.telephone), rows = l("Zalo", r.zalo, z ? "https://zalo.me/" + z : "", r.zalo) + l("Téléphone", r.telephone, t ? "tel:" + t : "", r.telephone) + l("Email", r.email, r.email ? "mailto:" + r.email : "", r.email) + l("Adresse", r.adresse, "", "") + l("Autre", r.contact, "", "");
+  return `<div class="cr-bloc"><h2>Coordonnées</h2>${rows ? `<dl class="pdl">${rows}</dl>` : `<p class="cr-vide">Aucune coordonnée pour l'instant.${S.ecrire ? " Utilise « Modifier les infos »." : ""}</p>`}</div>`;
+}
 const peMaj = (id, d) => db.collection("reponses").doc(id).update({ ...d, par: S.moi, maj: Date.now() }).catch((e) => refus(e));
 
 function peCarte(r) {
@@ -76,7 +82,7 @@ function pePage(r) {
   return `<div class="tete"><h1>${esc(peNom(r))}<small>${esc(peLigne(r))}</small></h1>
     <div class="outils"><button class="btn" data-persretour="1">← Personnes</button>${S.ecrire ? `<button class="btn" data-persedit="${esc(r.id)}">Modifier les infos</button>` : ""}<button class="btn" data-perscopier="${esc(r.id)}">Copier en texte</button>${S.ecrire ? `<button class="btn rouge" data-perssuppr="${esc(r.id)}">Supprimer</button>` : ""}</div></div>
   <div class="ppage"><aside class="cr-grille" style="grid-template-columns:1fr"><div class="pportrait">${r.photo ? `<img src="${esc(photoUrl(r.photo))}" alt="">` : `<b class="pini" style="background:${couleurDe(r.id)}">${esc(peIni(r))}</b>`}</div>
-    <div class="cr-bloc"><h2>Infos</h2><dl class="pdl">${info("Nom", esc(r.nom || ""))}${info("Âge", r.age ? esc(r.age) + " ans" : "")}${info("Profil", esc(r.profil || ""))}${info("Lieu", esc(r.lieu || ""))}${info("Entretien", esc(r.quand ? quand(r.quand) : ""))}${info("Langue", esc(r.langue || ""))}${info("Contact", esc(r.contact || ""))}${info("Recueilli par", r.par ? auteur(r) : "")}</dl></div></aside>
+    <div class="cr-bloc"><h2>Infos</h2><dl class="pdl">${info("Nom", esc(r.nom || ""))}${info("Âge", r.age ? esc(r.age) + " ans" : "")}${info("Profil", esc(r.profil || ""))}${info("Lieu", esc(r.lieu || ""))}${info("Entretien", esc(r.quand ? quand(r.quand) : ""))}${info("Langue", esc(r.langue || ""))}${info("Recueilli par", r.par ? auteur(r) : "")}</dl></div>${peCoord(r)}</aside>
   <div class="cr-grille" style="grid-template-columns:1fr">
     <div class="cr-bloc"><h2>Résumé de la personne</h2>${S.ecrire && db ? mic(`<textarea id="pf_resume" data-pf="resume" placeholder="Qui est cette personne, ce qu'elle a dit d'essentiel, ce qu'on retient…">${esc(r.resume || "")}</textarea>`, "pf_resume") : `<p>${esc(r.resume || "")}</p>`}</div>
     ${montreQ ? `<div class="cr-bloc" id="persQR"><h2>Questionnaire <small><span class="seg" role="group" aria-label="Langue" style="display:inline-flex">${[["fr", "FR"], ["vi", "VI"]].map(([k, l]) => `<button data-qlang="${k}" aria-pressed="${S.langQ === k}">${l}</button>`).join("")}</span></small></h2>${peQuestionnaire(r)}</div>` : S.ecrire && db && S.questions.length ? `<div class="cr-bloc"><h2>Questionnaire</h2><div><button class="btn" data-persq="1">Remplir le questionnaire pour cette personne</button></div></div>` : ""}
@@ -113,7 +119,11 @@ function peDialogue(id) {
     ${ch("lieu", "Lieu de l'entretien", o.lieu, "text", '')}
     <div class="duo">${ch("jour", "Jour", iso2, "date")}${ch("heure", "Heure (facultatif)", hh, "time")}</div>
     <div class="champ"><label for="pe_langue">Langue de l'entretien</label><select id="pe_langue">${["", "Vietnamien", "Français", "Anglais", "Autre"].map((x) => `<option value="${x}"${x === (o.langue || "") ? " selected" : ""}>${x || "—"}</option>`).join("")}</select></div>
-    ${ch("contact", "Contact (facultatif, reste dans l'équipe)", o.contact, "text", '')}
+    <div class="champ"><span class="l">Coordonnées (facultatif, restent dans l'équipe)</span></div>
+    <div class="duo">${ch("zalo", "Zalo", o.zalo, "text", ' inputmode="tel" autocomplete="off"')}${ch("telephone", "Téléphone", o.telephone, "text", ' inputmode="tel" autocomplete="off"')}</div>
+    ${ch("email", "E-mail", o.email, "email", ' autocomplete="off"')}
+    ${ch("adresse", "Adresse ou lieu où la retrouver", o.adresse, "text", '')}
+    ${ch("contact", "Autre contact ou remarque", o.contact, "text", '')}
     </div><div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end"><button class="btn" data-peannuler="1">Annuler</button><button class="btn jaune" data-pesauver="${esc(id || "")}">Enregistrer</button></div>`;
   d.showModal();
 }
@@ -121,7 +131,7 @@ async function peSauver(id) {
   if (!db) return;
   const v = (k) => ($("#pe_" + k).value || "").trim(), b = $('[data-pesauver]'); b.disabled = true;
   try {
-    const d = { nom: v("nom"), age: v("age"), profil: v("profil"), lieu: v("lieu"), langue: v("langue"), contact: v("contact"), quand: Date.parse(v("jour") + "T" + (v("heure") || "12:00")) || Date.now() };
+    const d = { nom: v("nom"), age: v("age"), profil: v("profil"), lieu: v("lieu"), langue: v("langue"), zalo: v("zalo"), telephone: v("telephone"), email: v("email"), adresse: v("adresse"), contact: v("contact"), quand: Date.parse(v("jour") + "T" + (v("heure") || "12:00")) || Date.now() };
     const f = $("#pe_photo").files[0];
     if (f) { const blob = await reduire(f), r = await assets.upload(blob, { type: blob.type === "image/jpeg" ? "image/jpeg" : (f.type || "image/jpeg") }); d.photo = r.id; }
     if (id) await db.collection("reponses").doc(id).update({ ...d, par: S.moi, maj: Date.now() });
@@ -130,7 +140,7 @@ async function peSauver(id) {
   } catch (e) { refus(e); b.disabled = false; }
 }
 function peTexte(r) {
-  const L = [`${peNom(r)}${peLigne(r) ? " : " + peLigne(r) : ""}`, r.quand ? "Entretien : " + quand(r.quand) : "", r.langue ? "Langue : " + r.langue : "", ""];
+  const L = [`${peNom(r)}${peLigne(r) ? " : " + peLigne(r) : ""}`, r.quand ? "Entretien : " + quand(r.quand) : "", r.langue ? "Langue : " + r.langue : "", r.zalo ? "Zalo : " + r.zalo : "", r.telephone ? "Téléphone : " + r.telephone : "", r.email ? "E-mail : " + r.email : "", ""];
   if (r.resume) L.push("RÉSUMÉ", r.resume, "");
   const q = [...S.questions].sort((a, b) => (a.ordre || 0) - (b.ordre || 0)).map((x) => { const a = (r.rep || {})[x.id]; return a && (a.v || a.autre) ? `Q : ${x.texte}\nR : ${a.v === "oui" ? "Oui" : a.v === "non" ? "Non" : a.v === "autre" && !a.autre ? "Autre" : a.v || ""}${a.autre ? " " + a.autre : ""}` : ""; }).filter(Boolean);
   const l = (r.qr || []).filter((x) => x.q || x.r).map((x) => `Q : ${x.q || ""}\nR : ${x.r || ""}`);
@@ -167,9 +177,10 @@ document.addEventListener("change", async (e) => {
   }
 });
 document.addEventListener("click", async (e) => {
-  const c = e.target.closest("[data-persq],[data-pers],[data-persretour],[data-persnouveau],[data-persedit],[data-perssuppr],[data-perscopier],[data-sousent],[data-qrajout],[data-qrsuppr],[data-peannuler],[data-pesauver],[data-perstranscrit],[data-persatranscrire]");
+  const c = e.target.closest("[data-pcopie],[data-persq],[data-pers],[data-persretour],[data-persnouveau],[data-persedit],[data-perssuppr],[data-perscopier],[data-sousent],[data-qrajout],[data-qrsuppr],[data-peannuler],[data-pesauver],[data-perstranscrit],[data-persatranscrire]");
   if (!c) return; const d = c.dataset;
   if (d.sousent) { S.sousEnt = d.sousent; try { localStorage.setItem("sousent", d.sousent); } catch (x) {} render(); return; }
+  if (d.pcopie) { try { await navigator.clipboard.writeText(d.pcopie); toast("Copié"); } catch (x) { prompt("Copie :", d.pcopie); } return; }
   if (d.persq) { S.persQ = S.persId; render(); return; }
   if (d.pers) { S.persId = d.pers; S.persQ = null; render(); scrollTo(0, 0); return; }
   if (d.persretour) { S.persId = null; render(); return; }
