@@ -6,7 +6,7 @@ COLS.push("fichiers"); S.fichiers = [];
 ONGLETS.splice(7, 0, ["fichiers", "Fichiers", null, "i-fich"]);
 FAB.fichiers = "";
 FORMS.fichiers = { nom: "Fichier", champs: [
-  ["nom", "Nom du fichier", "text", 1], ["theme", "Thème", "text", 0, null, "ex. Crues, Agriculture, Cartes, Entretiens"],
+  ["nom", "Nom du fichier", "text", 1], ["theme", "Thème", "text", 0, null, ""],
   ["lieu", "Lieu associé", "lieu"], ["jour", "Jour (pour l'afficher dans l'emploi du temps)", "date"], ["heure", "Heure (facultatif)", "time"], ["note", "Description", "textarea", 0, null, "De quoi s'agit-il, d'où vient-il, à quoi il sert…"]] };
 document.querySelector("svg defs, svg")?.insertAdjacentHTML("beforeend",
   `<symbol id="i-fich" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>`);

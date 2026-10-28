@@ -366,7 +366,7 @@ body{margin:0}img{max-width:100%}[hidden]{display:none!important}
   <h3>Planning Atlas</h3>
   <p class="qui" style="margin:0">Entre le code du groupe et ton prénom. Tu ne le feras qu'une fois sur cet appareil.</p>
   <div class="champ"><label for="e_code">Code du groupe</label><input id="e_code" type="password" autocomplete="off" required></div>
-  <div class="champ"><label for="e_pseudo">Ton prénom ou identifiant</label><input id="e_pseudo" maxlength="30" autocomplete="nickname" required placeholder="ex. Luca"></div>
+  <div class="champ"><label for="e_pseudo">Ton prénom ou identifiant</label><input id="e_pseudo" maxlength="30" autocomplete="nickname" required></div>
   <div class="champ"><span class="l">Ton site de workshop</span><div class="choix"><label><input type="radio" name="e_site" value="hanoi" checked><span>Hanoï · BG1 à BG4</span></label><label><input type="radio" name="e_site" value="tasung"><span>Tà Sung · TS1 à TS5</span></label></div></div>
   <p id="e_msg" class="retard" style="margin:0"></p>
   <button class="btn jaune">Entrer</button>
@@ -381,8 +381,8 @@ const ORDRE=["afaire","encours","fait"];
 const ONGLETS=[["auj","Aujourd'hui","Jour","i-auj"],["semaine","Semaine","Semaine","i-sem"],["taches","Tâches","Tâches","i-tac"],["carte","Carte","Carte","i-carte"],["mur","Mur","Mur","i-mur"],["questionnaire","Questionnaire","Enquête","i-q"],["consignes","Consignes",null,"i-con"]];
 const FAB={auj:"Créneau",semaine:"Créneau",taches:"Tâche",mur:"Note ou photo",consignes:"Modifier"};
 const QL={
-  fr:{oui:"Oui",non:"Non",autre:"Autre",prec:"Préciser (facultatif)",lieu:"Lieu de l'entretien",lieuEx:"ex. Marché du banc",profil:"Profil (facultatif)",profilEx:"ex. agricultrice, ~50 ans",rep:"Réponse",dicter:"Dicter la réponse (micro)",ok:"Enregistrer cette fiche"},
-  vi:{oui:"Có",non:"Không",autre:"Khác",prec:"Nói rõ thêm (không bắt buộc)",lieu:"Địa điểm phỏng vấn",lieuEx:"vd. chợ",profil:"Người trả lời (không bắt buộc)",profilEx:"vd. nông dân, khoảng 50 tuổi",rep:"Câu trả lời",dicter:"Nói để ghi lại câu trả lời (micro)",ok:"Lưu phiếu này"}};
+  fr:{oui:"Oui",non:"Non",autre:"Autre",prec:"Préciser (facultatif)",lieu:"Lieu de l'entretien",lieuEx:"",profil:"Profil (facultatif)",profilEx:"",rep:"Réponse",dicter:"Dicter la réponse (micro)",ok:"Enregistrer cette fiche"},
+  vi:{oui:"Có",non:"Không",autre:"Khác",prec:"Nói rõ thêm (không bắt buộc)",lieu:"Địa điểm phỏng vấn",lieuEx:"",profil:"Người trả lời (không bắt buộc)",profilEx:"",rep:"Câu trả lời",dicter:"Nói để ghi lại câu trả lời (micro)",ok:"Lưu phiếu này"}};
 
 const microLang=()=>S.langQ;
 const qt=q=>S.langQ==="vi"&&q.texte_vi?q.texte_vi:q.texte;
@@ -393,19 +393,19 @@ const lienQ=(l)=>new URL("questionnaire.html?site="+S.site+(l==="vi"?"&lang=vi":
 
 const FORMS={
   creneaux:{nom:"Créneau",champs:[
-    ["titre","Quoi","text",1,null,"ex. Relevé des berges, station 3"],["type","Type","choix",0,TYPES],
+    ["titre","Quoi","text",1,null,""],["type","Type","choix",0,TYPES],
     ["date","Jour","date",1],["debut","Début","time"],["fin","Fin","time"],
-    ["lieu","Lieu","text",0,null,"ex. Bãi Giữa, rive nord"],["qui","Pour qui","pourqui"],
+    ["lieu","Lieu","text",0,null,""],["qui","Pour qui","pourqui"],
     ["consignes","Consignes et matériel","textarea",0,null,"Rendez-vous, matériel à prendre, ce qu'on doit rapporter…"]]},
   taches:{nom:"Tâche",champs:[
     ["titre","Tâche","text",1],["statut","Statut","choix",0,STATUTS],["responsable","Responsable","text"],
-    ["echeance","Jour / échéance","date"],["heure","Heure (facultatif)","time"],["theme","Thème ou groupe","text",0,null,"ex. BG1, TS3, commun"],["detail","Détail","textarea"]]},
+    ["echeance","Jour / échéance","date"],["heure","Heure (facultatif)","time"],["theme","Thème ou groupe","text",0,null,""],["detail","Détail","textarea"]]},
   mur:{nom:"Note ou photo",champs:[
     ["photo","Photo","photo"],["texte","Description","textarea",0,null,"Ce qu'on voit, ce qu'on a observé…"],["lieu","Lieu associé","lieu"],["theme","Thème","text"],["jour","Jour (pour l'afficher dans l'emploi du temps)","date"],["heure","Heure (facultatif)","time"],["epingle","Épingler sur « Aujourd'hui »","checkbox"]]},
-  lieux:{nom:"Lieu",champs:[["nom","Nom du lieu","text",1,null,"ex. Rampe du marché"],["note","Notes sur ce lieu","textarea",0,null,"Ambiance, usages, ce qui change selon l'heure ou le niveau de l'eau…"]]},
+  lieux:{nom:"Lieu",champs:[["nom","Nom du lieu","text",1,null,""],["note","Notes sur ce lieu","textarea",0,null,"Ambiance, usages, ce qui change selon l'heure ou le niveau de l'eau…"]]},
   traces:{nom:"Trajet",champs:[["nom","Nom du trajet","text",1]]},
   questions:{nom:"Question",champs:[["texte","Question (français)","textarea",1],["texte_vi","Question en vietnamien (facultatif)","textarea",0,null,"Câu hỏi bằng tiếng Việt"],["type","Type","choix",0,QTYPES]]},
-  membres:{nom:"Identifiant",champs:[["pseudo","Ton prénom ou identifiant","text",1,null,"ex. Luca"]]},
+  membres:{nom:"Identifiant",champs:[["pseudo","Ton prénom ou identifiant","text",1,null,""]]},
   consignes:{nom:"Consignes communes",champs:[["texte","Consignes","textarea",0,null,"Nommage des fichiers, sources, légendes, éthique des entretiens…"]]}
 };
 const SITES={
@@ -601,7 +601,7 @@ const VUES={
     if(S.qmode==="questions"){
       corps=`<div class="liste">${qs.map((q,i)=>`<div class="q"><span class="n">${i+1}</span><div><div class="titre" style="font-weight:700;overflow-wrap:anywhere">${esc(q.texte)}</div>${q.texte_vi?`<div class="qui" lang="vi" style="overflow-wrap:anywhere">${esc(q.texte_vi)}</div>`:`<div class="qui" style="color:var(--alerte)">Pas encore de version vietnamienne</div>`}<span class="qui">${q.type==="ouverte"?"Ouverte":"Fermée (oui / non / autre)"} · ${auteur(q)}</span></div>
         <div class="fl"><button data-qmonte="${esc(q.id)}" aria-label="Monter"${i?"":" disabled"}>${ic("i-haut",14)}</button><button data-qdescend="${esc(q.id)}" aria-label="Descendre"${i<qs.length-1?"":" disabled"}>${ic("i-bas",14)}</button><button data-ouvrir="questions" data-id="${esc(q.id)}" aria-label="Modifier">✎</button></div></div>`).join("")||`<p class="vide">Aucune question pour l'instant : écris la première ci-dessous.</p>`}</div>
-      ${S.ecrire&&db?`<div class="compo"><label for="qtexte" style="font-weight:700">Nouvelle question</label><textarea id="qtexte" rows="2" placeholder="ex. Depuis combien de temps habitez-vous sur le banc ?"></textarea>
+      ${S.ecrire&&db?`<div class="compo"><label for="qtexte" style="font-weight:700">Nouvelle question</label><textarea id="qtexte" rows="2"></textarea>
         <textarea id="qtexte_vi" rows="2" lang="vi" placeholder="Version vietnamienne (facultatif)" aria-label="Version vietnamienne"></textarea>
         <div class="choix" role="radiogroup">${Object.entries(QTYPES).map(([k,v],i)=>`<label><input type="radio" name="qtype" id="qtype_${k}" value="${k}"${i?"":" checked"}><span>${v}</span></label>`).join("")}</div>
         <div><button class="btn jaune" data-qajout="1">${ic("i-plus",14)}Ajouter au questionnaire</button></div></div>`:""}
@@ -623,8 +623,8 @@ const VUES={
       corps=`<form class="feuille" id="collage"><p class="qui" style="margin:0">Pour un entretien fait à la main ou hors du site : colle ici le texte (notes, retranscription, traduction). Il rejoint les fiches, le compte rendu du jour et les exports.</p>
         <div class="duo trois"><div class="champ"><label for="c_date">Jour de l'entretien</label><input type="date" id="c_date" value="${auj()}" required></div>
           <div class="champ"><label for="c_heure">Heure (facultatif)</label><input type="time" id="c_heure"></div>
-          <div class="champ"><label for="c_lieu">Lieu</label><input type="text" id="c_lieu" placeholder="ex. Marché du banc"></div></div>
-        <div class="champ"><label for="c_profil">Profil (facultatif)</label><input type="text" id="c_profil" placeholder="ex. agricultrice, ~50 ans"></div>
+          <div class="champ"><label for="c_lieu">Lieu</label><input type="text" id="c_lieu"></div></div>
+        <div class="champ"><label for="c_profil">Profil (facultatif)</label><input type="text" id="c_profil"></div>
         <div class="champ"><label for="c_texte">Texte de l'entretien *</label>${mic('<textarea id="c_texte" rows="14" required placeholder="Colle ou écris le texte ici : questions, réponses, citations…"></textarea>',"c_texte","Dicter")}</div>
         <div><button class="btn jaune">Enregistrer cet entretien</button></div></form>`;
     }else{

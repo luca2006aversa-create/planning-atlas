@@ -107,12 +107,12 @@ function peDialogue(id) {
   const ch = (k, l, v, t = "text", extra = "") => `<div class="champ"><label for="pe_${k}">${l}</label><input type="${t}" id="pe_${k}" value="${esc(v ?? "")}"${extra}></div>`;
   d.innerHTML = `<h3 style="margin:0 0 10px">${r ? "Modifier les infos" : "Nouvelle personne"}</h3><div class="grille">
     <div class="champ"><span class="l">Photo (facultatif)</span><div style="display:flex;align-items:center;gap:10px">${o.photo ? `<img src="${esc(photoUrl(o.photo))}" alt="" style="width:56px;height:56px;border-radius:50%;object-fit:cover">` : ""}<input type="file" id="pe_photo" accept="image/*"></div><span class="qui">Demande l'accord de la personne avant de la photographier.</span></div>
-    ${ch("nom", "Nom ou prénom", o.nom, "text", ' autocomplete="off" placeholder="ex. Cô Lan (ou laisser vide : anonyme)"')}
-    <div class="duo">${ch("age", "Âge", o.age, "text", ' inputmode="numeric" placeholder="ex. 55"')}${ch("profil", "Profil, métier", o.profil, "text", ' placeholder="ex. agricultrice"')}</div>
-    ${ch("lieu", "Lieu de l'entretien", o.lieu, "text", ' placeholder="ex. Marché du banc"')}
+    ${ch("nom", "Nom ou prénom", o.nom, "text", ' autocomplete="off"')}
+    <div class="duo">${ch("age", "Âge", o.age, "text", ' inputmode="numeric"')}${ch("profil", "Profil, métier", o.profil, "text", '')}</div>
+    ${ch("lieu", "Lieu de l'entretien", o.lieu, "text", '')}
     <div class="duo">${ch("jour", "Jour", iso2, "date")}${ch("heure", "Heure (facultatif)", hh, "time")}</div>
     <div class="champ"><label for="pe_langue">Langue de l'entretien</label><select id="pe_langue">${["", "Vietnamien", "Français", "Anglais", "Autre"].map((x) => `<option value="${x}"${x === (o.langue || "") ? " selected" : ""}>${x || "—"}</option>`).join("")}</select></div>
-    ${ch("contact", "Contact (facultatif, reste dans l'équipe)", o.contact, "text", ' placeholder="téléphone, adresse du lieu…"')}
+    ${ch("contact", "Contact (facultatif, reste dans l'équipe)", o.contact, "text", '')}
     </div><div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end"><button class="btn" data-peannuler="1">Annuler</button><button class="btn jaune" data-pesauver="${esc(id || "")}">Enregistrer</button></div>`;
   d.showModal();
 }
