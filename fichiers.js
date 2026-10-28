@@ -220,7 +220,7 @@ VUES.fichiers = () => {
   ${themes.length ? `<div class="puces">${[["", "Tout"], ...themes.map((x) => [x, x])].map(([k, v]) => `<button data-theme="${esc(k)}" aria-pressed="${S.theme === k}">${esc(v)}</button>`).join("")}</div>` : ""}
   ${l.length ? `<div class="fichiers">${l.map(fiCarte).join("")}</div>` : vide("Aucun fichier pour l'instant. Dépose un PDF, un tableur, une photo…")}`;
 };
-async function fiEnvoyer(liste) {
+async function fiEnvoyer(liste, extra = {}) {
   const fichiers = [...liste]; let ok = 0;
   for (const [i, f] of fichiers.entries()) {
     if (f.size > fiMax()) { toast(`« ${f.name} » dépasse ${HUB ? fiMaxTxt() : "50 Mo"} : trop lourd.`); continue; }
@@ -237,7 +237,7 @@ async function fiEnvoyer(liste) {
     const now = Date.now();
     let vign = false;
     if (!HUB && fiImage({ type: f.type })) { try { const bm = await createImageBitmap(f), b = await fiMiniatureBlob(bm, bm.width, bm.height); if (b) { const r = await SB.storage.from("documents").upload(chemin + ".vign.jpg", b, { contentType: "image/jpeg", cacheControl: "31536000" }); vign = !r.error; } } catch (e) {} }
-    try { await db.collection("fichiers").doc(nouvelId()).set({ nom: f.name, chemin, taille, vign, stock: HUB ? "hub" : "sb", type: f.type || "", theme: S.theme || "", note: "", par: S.moi, auteur: S.moi, cree: now, maj: now }); ok++; }
+    try { await db.collection("fichiers").doc(nouvelId()).set({ nom: f.name, chemin, taille, vign, stock: HUB ? "hub" : "sb", type: f.type || "", theme: S.theme || "", note: "", ...extra, par: S.moi, auteur: S.moi, cree: now, maj: now }); ok++; }
     catch (e) { await fiSupprimer({ chemin, stock: HUB ? "hub" : "sb" }); refus(e); return; }
   }
   if (ok) toast(ok === 1 ? "Fichier ajouté" : `${ok} fichiers ajoutés`);
@@ -269,4 +269,4 @@ document.addEventListener("click", async (e) => {
     catch (x) { if (w) w.close(); toast("Impossible d'ouvrir ce fichier."); }
   }
 });
-new MutationObserver(() => { if (S.vue === "fichiers" || S.vue === "compte") { fiVignettes(); if (S.vue === "fichiers") fiMiniaturesPdf(); } }).observe(document.getElementById("vue"), { childList: true });
+new MutationObserver(() => { if (["fichiers", "compte", "questionnaire"].includes(S.vue)) { fiVignettes(); if (S.vue !== "compte") fiMiniaturesPdf(); } }).observe(document.getElementById("vue"), { childList: true });

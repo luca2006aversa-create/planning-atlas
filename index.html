@@ -662,7 +662,7 @@ function render(){
   $("#ongletsHaut").innerHTML=ong;
   $("#ongletsBas").innerHTML=S.seulQ?"":ONGLETS.filter(o=>o[2]).map(([k,v,c,i])=>`<button data-vue="${k}" aria-current="${S.vue===k?"page":"false"}">${ic(i,20)}<span>${c}</span></button>`).join("");
   document.querySelector("nav.bas").hidden=S.seulQ;
-  $("#outils").hidden=!["semaine","taches","mur","fichiers"].includes(S.vue);
+  $("#outils").hidden=!(["semaine","taches","mur","fichiers"].includes(S.vue)||(S.vue==="questionnaire"&&!S.seulQ&&S.sousEnt==="personnes"&&!S.persId));
   const f=$("#fab");f.hidden=!S.ecrire||!db||!FAB[S.vue];f.querySelector("span").textContent=FAB[S.vue]||"";
   $("#pseudos").innerHTML=S.membres.map(m=>`<option value="${esc(m.pseudo)}">`).join("");
   const mb=$("#moiBtn");mb.hidden=!S.moi;mb.querySelector("span").textContent=monPseudo()||"Choisir mon identifiant";
@@ -988,6 +988,7 @@ function etat(ok,t){const e=$("#etat");e.classList.toggle("ok",ok);e.querySelect
 <script src="extras.js"></script>
 <script src="fichiers.js"></script>
 <script src="compte.js"></script>
+<script src="entretiens.js"></script>
 <script src="exports.js"></script>
 <script src="sb.js"></script>
 </body></html>

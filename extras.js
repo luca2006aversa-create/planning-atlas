@@ -326,6 +326,7 @@ function cameraSecours(vers) {
 }
 async function photoPrise(fichier, exif, vers) {
   if (vers === "tableau") return tbEnvoyer(fichier);
+  if (vers && vers.startsWith("pers:")) { const id = vers.slice(5); await fiEnvoyer([fichier], { personne: id, theme: "Entretiens" }); return peMaj(id, { a_transcrire: true, transcrit: false }); }
   if (!($("#dlg").open && $("#f_photo"))) { S.vue = "mur"; ouvrir("mur", null, {}); }
   const fi = $("#f_photo"); if (!fi) return;
   const dt = new DataTransfer(); dt.items.add(fichier); fi.files = dt.files;
