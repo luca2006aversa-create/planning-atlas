@@ -71,6 +71,7 @@ function peLibres(r) {
 }
 function pePage(r) {
   const piece = pePieces(r.id), mic = (c, id) => typeof avecMicro === "function" ? avecMicro(c, id, "Dicter") : c;
+  const montreQ = S.persQ === r.id || Object.keys(r.rep || {}).length > 0;
   const info = (k, v) => v ? `<dt>${k}</dt><dd>${v}</dd>` : "";
   return `<div class="tete"><h1>${esc(peNom(r))}<small>${esc(peLigne(r))}</small></h1>
     <div class="outils"><button class="btn" data-persretour="1">← Personnes</button>${S.ecrire ? `<button class="btn" data-persedit="${esc(r.id)}">Modifier les infos</button>` : ""}<button class="btn" data-perscopier="${esc(r.id)}">Copier en texte</button>${S.ecrire ? `<button class="btn rouge" data-perssuppr="${esc(r.id)}">Supprimer</button>` : ""}</div></div>
@@ -78,7 +79,7 @@ function pePage(r) {
     <div class="cr-bloc"><h2>Infos</h2><dl class="pdl">${info("Nom", esc(r.nom || ""))}${info("Âge", r.age ? esc(r.age) + " ans" : "")}${info("Profil", esc(r.profil || ""))}${info("Lieu", esc(r.lieu || ""))}${info("Entretien", esc(r.quand ? quand(r.quand) : ""))}${info("Langue", esc(r.langue || ""))}${info("Contact", esc(r.contact || ""))}${info("Recueilli par", r.par ? auteur(r) : "")}</dl></div></aside>
   <div class="cr-grille" style="grid-template-columns:1fr">
     <div class="cr-bloc"><h2>Résumé de la personne</h2>${S.ecrire && db ? mic(`<textarea id="pf_resume" data-pf="resume" placeholder="Qui est cette personne, ce qu'elle a dit d'essentiel, ce qu'on retient…">${esc(r.resume || "")}</textarea>`, "pf_resume") : `<p>${esc(r.resume || "")}</p>`}</div>
-    <div class="cr-bloc" id="persQR"><h2>Questionnaire <small><span class="seg" role="group" aria-label="Langue" style="display:inline-flex">${[["fr", "FR"], ["vi", "VI"]].map(([k, l]) => `<button data-qlang="${k}" aria-pressed="${S.langQ === k}">${l}</button>`).join("")}</span></small></h2>${peQuestionnaire(r)}</div>
+    ${montreQ ? `<div class="cr-bloc" id="persQR"><h2>Questionnaire <small><span class="seg" role="group" aria-label="Langue" style="display:inline-flex">${[["fr", "FR"], ["vi", "VI"]].map(([k, l]) => `<button data-qlang="${k}" aria-pressed="${S.langQ === k}">${l}</button>`).join("")}</span></small></h2>${peQuestionnaire(r)}</div>` : S.ecrire && db && S.questions.length ? `<div class="cr-bloc"><h2>Questionnaire</h2><div><button class="btn" data-persq="1">Remplir le questionnaire pour cette personne</button></div></div>` : ""}
     <div class="cr-bloc" id="persLibres"><h2>Autres questions et réponses <small>${(r.qr || []).length}</small></h2>${peLibres(r)}</div>
     <div class="cr-bloc"><h2>Notes brutes</h2>${S.ecrire && db ? mic(`<textarea id="pf_texte_libre" data-pf="texte_libre" rows="6" placeholder="Colle ou dicte ici le texte de l'entretien…">${esc(r.texte_libre || "")}</textarea>`, "pf_texte_libre") : `<p style="white-space:pre-wrap">${esc(r.texte_libre || "")}</p>`}</div>
     <div class="cr-bloc"><h2>Photos et documents <small>${piece.length}</small></h2>
@@ -166,10 +167,11 @@ document.addEventListener("change", async (e) => {
   }
 });
 document.addEventListener("click", async (e) => {
-  const c = e.target.closest("[data-pers],[data-persretour],[data-persnouveau],[data-persedit],[data-perssuppr],[data-perscopier],[data-sousent],[data-qrajout],[data-qrsuppr],[data-peannuler],[data-pesauver],[data-perstranscrit],[data-persatranscrire]");
+  const c = e.target.closest("[data-persq],[data-pers],[data-persretour],[data-persnouveau],[data-persedit],[data-perssuppr],[data-perscopier],[data-sousent],[data-qrajout],[data-qrsuppr],[data-peannuler],[data-pesauver],[data-perstranscrit],[data-persatranscrire]");
   if (!c) return; const d = c.dataset;
   if (d.sousent) { S.sousEnt = d.sousent; try { localStorage.setItem("sousent", d.sousent); } catch (x) {} render(); return; }
-  if (d.pers) { S.persId = d.pers; render(); scrollTo(0, 0); return; }
+  if (d.persq) { S.persQ = S.persId; render(); return; }
+  if (d.pers) { S.persId = d.pers; S.persQ = null; render(); scrollTo(0, 0); return; }
   if (d.persretour) { S.persId = null; render(); return; }
   if (d.persnouveau) return peDialogue(null);
   if (d.persedit) return peDialogue(d.persedit);
