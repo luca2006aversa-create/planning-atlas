@@ -25,6 +25,7 @@ async function charger() {
   charge = true;
   new Set([...Object.keys(abonnes), ...Object.keys(abonnesDoc).map((k) => k.split("/")[0])]).forEach(emettre);
 }
+const filesMaj = new Map();
 const ref = (col, id) => ({
   id,
   async set(data) {
@@ -33,7 +34,18 @@ const ref = (col, id) => ({
     if (error) throw erreur(error);
     table(col).set(id, data); emettre(col);
   },
-  async update(patch) { await this.set({ ...(table(col).get(id) || {}), ...patch }); },
+  /* modification partielle : les écritures d'un même document passent l'une après l'autre, et chacune repart de la version
+     la plus récente du serveur (sinon deux modifications rapprochées s'écrasaient : le texte tapé disparaissait) */
+  update(patch) {
+    const cle = col + "/" + id, prec = filesMaj.get(cle) || Promise.resolve();
+    const fait = prec.then(async () => {
+      let base = table(col).get(id) || {};
+      try { const { data, error } = await SB.from("docs").select("data").eq("col", col).eq("id", id).maybeSingle(); if (!error && data && data.data) base = data.data; } catch (e) {}
+      await this.set({ ...base, ...patch });
+    });
+    filesMaj.set(cle, fait.catch(() => {}));
+    return fait;
+  },
   async delete() {
     const { error } = await SB.from("docs").delete().match({ col, id });
     if (error) throw erreur(error);

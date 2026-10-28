@@ -34,7 +34,10 @@ peCss.textContent = `.pgrille{display:grid;grid-template-columns:repeat(auto-fil
 .pqi textarea{width:100%;font:inherit;color:inherit;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:8px 10px;resize:vertical;min-height:44px}
 .pdlg{max-width:520px;width:94vw;border:1px solid var(--line);border-radius:16px;background:var(--surface);color:var(--ink);padding:18px}
 .pdlg::backdrop{background:#000a}
-.pdlg .grille{display:grid;gap:10px}`;
+.pdlg .grille{display:grid;gap:10px}
+.pif{display:grid;gap:3px;font-size:.8rem;color:var(--muted);font-weight:600}
+.pif input,.pif select{font:inherit;font-weight:400;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:8px 10px;width:100%;min-width:0}
+.cr-bloc .pif+.pif,.cr-bloc .pif+.duo,.cr-bloc .duo+.pif{margin-top:2px}`;
 document.head.appendChild(peCss);
 
 const peReponses = () => [...S.reponses].sort((a, b) => (a.quand || 0) - (b.quand || 0));
@@ -81,12 +84,23 @@ function peLectureQR(r) {
   const l = (r.qr || []).filter((x) => x.q || x.r).map((x) => ({ q: x.q, r: x.r }));
   return [...q, ...l].map((x) => `<div class="pqr"><span class="pq">${esc(x.q || "")}</span><p style="margin:0;white-space:pre-wrap;overflow-wrap:anywhere">${esc(x.r || "")}</p></div>`).join("");
 }
+const peChamp = (k, l, v, t = "text", extra = "") => `<label class="pif"><span>${l}</span><input type="${t}" id="pi_${k}" data-pi="${k}" value="${esc(v || "")}"${extra}></label>`;
+function peAsideEdition(r) {
+  const dt = r.quand ? new Date(r.quand) : null, jour = dt ? iso(dt) : "", heure = dt ? String(dt.getHours()).padStart(2, "0") + ":" + String(dt.getMinutes()).padStart(2, "0") : "";
+  return `<aside class="cr-grille" style="grid-template-columns:1fr"><div class="pportrait">${r.photo ? `<img src="${esc(photoUrl(r.photo))}" alt="">` : `<b class="pini" style="background:${couleurDe(r.id)}">${esc(peIni(r))}</b>`}</div>
+    <div><button class="btn" data-persphoto="${esc(r.id)}" style="width:100%;justify-content:center">${r.photo ? "Changer la photo" : "Ajouter une photo"}</button></div>
+    <div class="cr-bloc"><h2>Infos</h2>${peChamp("nom", "Nom ou prénom", r.nom)}<div class="duo">${peChamp("age", "Âge", r.age, "text", ' inputmode="numeric"')}${peChamp("profil", "Profil, métier", r.profil)}</div>${peChamp("lieu", "Lieu de l'entretien", r.lieu)}
+      <div class="duo"><label class="pif"><span>Jour</span><input type="date" id="pi_jour" data-pi="quand" value="${jour}"></label><label class="pif"><span>Heure</span><input type="time" id="pi_heure" data-pi="quand" value="${heure}"></label></div>
+      <label class="pif"><span>Langue de l'entretien</span><select id="pi_langue" data-pi="langue">${["", "Vietnamien", "Français", "Anglais", "Autre"].map((x) => `<option value="${x}"${x === (r.langue || "") ? " selected" : ""}>${x || "—"}</option>`).join("")}</select></label>
+      <span class="qui">Recueilli par ${r.auteur || r.par ? auteur({ par: r.auteur || r.par }) : "quelqu'un"}</span></div>
+    <div class="cr-bloc"><h2>Coordonnées</h2>${peChamp("zalo", "Zalo", r.zalo, "text", ' inputmode="tel" autocomplete="off"')}${peChamp("telephone", "Téléphone", r.telephone, "text", ' inputmode="tel" autocomplete="off"')}${peChamp("email", "E-mail", r.email, "email", ' autocomplete="off"')}${peChamp("adresse", "Adresse ou lieu où la retrouver", r.adresse)}${peChamp("contact", "Autre contact ou remarque", r.contact)}</div></aside>`;
+}
 function pePage(r) {
   const piece = pePieces(r.id).sort((a, b) => (a.cree || 0) - (b.cree || 0)), mic = (c, id) => typeof avecMicro === "function" ? avecMicro(c, id, "Dicter") : c;
   const lecture = !!r.valide, montreQ = S.persQ === r.id || Object.keys(r.rep || {}).length > 0;
   const info = (k, v) => v ? `<dt>${k}</dt><dd>${v}</dd>` : "";
   const entete = `<div class="tete"><h1>${esc(peNom(r))}<small>${esc(peLigne(r))}</small></h1>
-    <div class="outils"><button class="btn" data-persretour="1">← Personnes</button>${lecture ? `<span class="pbadge ok" style="position:static;align-self:center">Validé</span>` : `<span class="pbadge" style="position:static;align-self:center;background:#6d7b75">Brouillon</span>${S.ecrire ? `<button class="btn" data-persedit="${esc(r.id)}">Modifier les infos</button>` : ""}`}<button class="btn" data-persrecap="${esc(r.id)}">Récap PDF</button><button class="btn" data-perscopier="${esc(r.id)}">Copier en texte</button>${S.ecrire && !lecture ? `<button class="btn rouge" data-perssuppr="${esc(r.id)}">Supprimer</button>` : ""}</div></div>`;
+    <div class="outils"><button class="btn" data-persretour="1">← Personnes</button>${lecture ? `<span class="pbadge ok" style="position:static;align-self:center">Validé</span>` : `<span class="pbadge" style="position:static;align-self:center;background:#6d7b75">Brouillon</span>`}<button class="btn" data-persrecap="${esc(r.id)}">Récap PDF</button><button class="btn" data-perscopier="${esc(r.id)}">Copier en texte</button>${S.ecrire && !lecture ? `<button class="btn rouge" data-perssuppr="${esc(r.id)}">Supprimer</button>` : ""}</div></div>`;
   const aside = `<aside class="cr-grille" style="grid-template-columns:1fr"><div class="pportrait">${r.photo ? `<img src="${esc(photoUrl(r.photo))}" alt="">` : `<b class="pini" style="background:${couleurDe(r.id)}">${esc(peIni(r))}</b>`}</div>
     <div class="cr-bloc"><h2>Infos</h2><dl class="pdl">${info("Nom", esc(r.nom || ""))}${info("Âge", r.age ? esc(r.age) + " ans" : "")}${info("Profil", esc(r.profil || ""))}${info("Lieu", esc(r.lieu || ""))}${info("Entretien", esc(r.quand ? quand(r.quand) : ""))}${info("Langue", esc(r.langue || ""))}${info("Recueilli par", r.auteur || r.par ? auteur({ par: r.auteur || r.par }) : "")}</dl></div>${peCoord(r)}</aside>`;
   if (lecture) {
@@ -99,7 +113,7 @@ function pePage(r) {
       <div class="cr-bloc" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">${S.ecrire ? `<button class="btn" data-persmodifier="${esc(r.id)}">Modifier</button>` : ""}<button class="btn" data-persrecap="${esc(r.id)}">Récap PDF</button><span class="qui">Fiche validée ${r.par && r.par !== (r.auteur || r.par) ? "· dernière modification par " + auteur(r) + " " : ""}· ${esc(quand(r.maj))}</span></div>
     </div></div>`;
   }
-  return entete + `<div class="ppage">${aside}
+  return entete + `<div class="ppage">${peAsideEdition(r)}
   <div class="cr-grille" style="grid-template-columns:1fr">
     <div class="cr-bloc"><h2>Résumé de la personne</h2>${S.ecrire && db ? mic(`<textarea id="pf_resume" data-pf="resume" placeholder="Qui est cette personne, ce qu'elle a dit d'essentiel, ce qu'on retient…">${esc(r.resume || "")}</textarea>`, "pf_resume") : `<p>${esc(r.resume || "")}</p>`}</div>
     ${montreQ ? `<div class="cr-bloc" id="persQR"><h2>Questionnaire <small><span class="seg" role="group" aria-label="Langue" style="display:inline-flex">${[["fr", "FR"], ["vi", "VI"]].map(([k, l]) => `<button data-qlang="${k}" aria-pressed="${S.langQ === k}">${l}</button>`).join("")}</span></small></h2>${peQuestionnaire(r)}</div>` : S.ecrire && db && S.questions.length ? `<div class="cr-bloc"><h2>Questionnaire</h2><div><button class="btn" data-persq="1">Remplir le questionnaire pour cette personne</button></div></div>` : ""}
@@ -184,17 +198,31 @@ function peTexte(r) {
 }
 
 /* enregistrement automatique en quittant un champ */
-document.addEventListener("focusout", async (e) => {
-  const t = e.target; if (!S.persId || !db || !S.ecrire) return;
+async function peAuto(t) {
+  if (!S.persId || !db || !S.ecrire || !t || !t.dataset) return;
   const r = S.reponses.find((x) => x.id === S.persId); if (!r) return;
-  if (t.dataset && t.dataset.pf) { if ((r[t.dataset.pf] || "") !== t.value) await peMaj(r.id, { [t.dataset.pf]: t.value }); return; }
-  if (t.dataset && t.dataset.pqi != null) {
+  if (t.dataset.pi) { await peSauveInfo(r, t.dataset.pi); return; }
+  if (t.dataset.pf) { const el = document.getElementById(t.id) || t; if ((r[t.dataset.pf] || "") !== el.value) await peMaj(r.id, { [t.dataset.pf]: el.value }); return; }
+  if (t.dataset.pqi != null) {
     const qr = []; document.querySelectorAll("#persLibres .pqi").forEach((div) => { const a = div.querySelector('[data-k="q"]'), b = div.querySelector('[data-k="r"]'); qr.push({ q: a.value.trim(), r: b.value.trim() }); });
     if (JSON.stringify(qr) !== JSON.stringify((r.qr || []).map((x) => ({ q: x.q || "", r: x.r || "" })))) await peMaj(r.id, { qr });
   }
+}
+document.addEventListener("focusout", (e) => { peAuto(e.target); });
+const peMinuteurs = new Map();
+document.addEventListener("input", (e) => {
+  const t = e.target; if (!t.dataset || !(t.dataset.pi || t.dataset.pf || t.dataset.pqi != null) || !t.id) return;
+  clearTimeout(peMinuteurs.get(t.id)); peMinuteurs.set(t.id, setTimeout(() => peAuto(document.getElementById(t.id) || t), 900));
 });
+async function peSauveInfo(r, k) {
+  let v;
+  if (k === "quand") { const j = ($("#pi_jour") || {}).value, h = ($("#pi_heure") || {}).value; v = Date.parse(j + "T" + (h || "12:00")); if (!isFinite(v)) return; if (v === r.quand) return; }
+  else { const el = $("#pi_" + k); if (!el) return; v = el.value.trim(); if ((r[k] || "") === v) return; }
+  await peMaj(r.id, { [k]: v });
+}
 document.addEventListener("change", async (e) => {
   const t = e.target;
+  if (t.dataset && t.dataset.pi && S.persId && db && S.ecrire) { const r = S.reponses.find((x) => x.id === S.persId); if (r) await peSauveInfo(r, t.dataset.pi); return; }
   if (t.dataset && t.dataset.pqr && S.persId && db && S.ecrire) {
     const r = S.reponses.find((x) => x.id === S.persId); if (!r) return;
     const rep = { ...(r.rep || {}) };
@@ -211,11 +239,17 @@ document.addEventListener("change", async (e) => {
   }
 });
 document.addEventListener("click", async (e) => {
-  const c = e.target.closest("[data-persvalider],[data-persmodifier],[data-persrecap],[data-pcopie],[data-persq],[data-pers],[data-persretour],[data-persnouveau],[data-persedit],[data-perssuppr],[data-perscopier],[data-sousent],[data-qrajout],[data-qrsuppr],[data-peannuler],[data-pesauver],[data-perstranscrit],[data-persatranscrire]");
+  const c = e.target.closest("[data-persphoto],[data-persvalider],[data-persmodifier],[data-persrecap],[data-pcopie],[data-persq],[data-pers],[data-persretour],[data-persnouveau],[data-persedit],[data-perssuppr],[data-perscopier],[data-sousent],[data-qrajout],[data-qrsuppr],[data-peannuler],[data-pesauver],[data-perstranscrit],[data-persatranscrire]");
   if (!c) return; const d = c.dataset;
   if (d.sousent) { S.sousEnt = d.sousent; try { localStorage.setItem("sousent", d.sousent); } catch (x) {} render(); return; }
+  if (d.persphoto) {
+    let i = document.getElementById("pePhotoGlobal");
+    if (!i) { i = document.createElement("input"); i.type = "file"; i.accept = "image/*"; i.id = "pePhotoGlobal"; i.hidden = true; document.body.appendChild(i);
+      i.addEventListener("change", async () => { const f = i.files[0], id = i.dataset.cible; i.value = ""; if (!f || !id) return; try { const blob = await reduire(f), r = await assets.upload(blob, { type: blob.type === "image/jpeg" ? "image/jpeg" : (f.type || "image/jpeg") }); await peMaj(id, { photo: r.id }); toast("Photo enregistrée"); } catch (x) { refus(x); } }); }
+    i.dataset.cible = d.persphoto; i.click(); return;
+  }
   if (d.persrecap) { const rr = S.reponses.find((x) => x.id === d.persrecap); if (rr) await peRecap(rr); return; }
-  if (d.persvalider) { const rr = S.reponses.find((x) => x.id === d.persvalider); if (!rr) return; const vide = !rr.resume && !(rr.qr || []).some((x) => x.q || x.r) && !Object.keys(rr.rep || {}).length && !rr.texte_libre && !pePieces(rr.id).length; if (vide && !confirm("Cette fiche est vide. La valider quand même ?")) return; await peMaj(rr.id, { valide: true }); scrollTo(0, 0); toast("Fiche validée"); return; }
+  if (d.persvalider) { const rr = S.reponses.find((x) => x.id === d.persvalider); if (!rr) return; const dom = (id) => { const e = document.getElementById(id); return e ? e.value.trim() : ""; }; const vide = !(rr.resume || dom("pf_resume")) && !(rr.qr || []).some((x) => x.q || x.r) && !document.querySelector("#persLibres textarea[data-pqi]:not(:placeholder-shown)") && !Object.keys(rr.rep || {}).length && !document.querySelector("#persQR input:checked") && !(rr.texte_libre || dom("pf_texte_libre")) && !pePieces(rr.id).length; if (vide && !confirm("Cette fiche est vide. La valider quand même ?")) return; await peMaj(rr.id, { valide: true }); scrollTo(0, 0); toast("Fiche validée"); return; }
   if (d.persmodifier) { await peMaj(d.persmodifier, { valide: false }); toast("Fiche rouverte pour modification"); return; }
   if (d.pcopie) { try { await navigator.clipboard.writeText(d.pcopie); toast("Copié"); } catch (x) { prompt("Copie :", d.pcopie); } return; }
   if (d.persq) { S.persQ = S.persId; render(); return; }
