@@ -215,7 +215,7 @@ VUES.fichiers = () => {
   const l = S.fichiers.filter((x) => cherche(x, "nom", "note", "theme") && (!S.theme || x.theme === S.theme)).sort((a, b) => (b.cree || 0) - (a.cree || 0));
   const total = S.fichiers.reduce((s, x) => s + (x.taille || 0), 0);
   return `<div class="tete"><h1>Fichiers<small>PDF, documents, tableurs, photos : tout au même endroit</small></h1></div>
-  ${S.ecrire && db ? `<div class="depose" id="depose"><span class="glisse">Glisse des fichiers ici, ou</span><label class="btn jaune" style="cursor:pointer">${ic("i-plus", 14)}Ajouter des fichiers<input type="file" id="fiFichiers" multiple hidden></label><div class="jauge-stock${!HUB && total > 0.8 * 1073741824 ? " haut" : ""}"><span class="quota">${HUB ? "Stockage sur le NAS, " + fiMaxTxt() + " maximum par fichier" : "50 Mo maximum par fichier"} · ${esc(fiTaille(total))} déposés${HUB ? "" : " sur ~1 Go (photos du mur en plus)"}</span>${HUB ? "" : `<i><b style="width:${Math.min(100, Math.round(total / 10737418.24))}%"></b></i>`}</div></div>` : ""}
+  ${S.ecrire && db ? `<div class="depose" id="depose"><span class="glisse">Glisse des fichiers ici, ou</span><button class="btn jaune" data-fichoisir="">${ic("i-plus", 14)}Ajouter des fichiers</button><div class="jauge-stock${!HUB && total > 0.8 * 1073741824 ? " haut" : ""}"><span class="quota">${HUB ? "Stockage sur le NAS, " + fiMaxTxt() + " maximum par fichier" : "50 Mo maximum par fichier"} · ${esc(fiTaille(total))} déposés${HUB ? "" : " sur ~1 Go (photos du mur en plus)"}</span>${HUB ? "" : `<i><b style="width:${Math.min(100, Math.round(total / 10737418.24))}%"></b></i>`}</div></div>` : ""}
   ${nasCarte()}
   ${themes.length ? `<div class="puces">${[["", "Tout"], ...themes.map((x) => [x, x])].map(([k, v]) => `<button data-theme="${esc(k)}" aria-pressed="${S.theme === k}">${esc(v)}</button>`).join("")}</div>` : ""}
   ${l.length ? `<div class="fichiers">${l.map(fiCarte).join("")}</div>` : vide("Aucun fichier pour l'instant. Dépose un PDF, un tableur, une photo…")}`;
@@ -242,6 +242,23 @@ async function fiEnvoyer(liste, extra = {}) {
   }
   if (ok) toast(ok === 1 ? "Fichier ajouté" : `${ok} fichiers ajoutés`);
 }
+/* un seul sélecteur de fichiers, hors de l'écran redessiné : l'écran se redessine à chaque changement des autres (temps réel),
+   ce qui faisait disparaître le sélecteur pendant le choix d'un fichier */
+let fiCible = null;
+function fiChoisir(cible) {
+  fiCible = cible; let i = document.getElementById("fiGlobal");
+  if (!i) {
+    i = document.createElement("input"); i.type = "file"; i.id = "fiGlobal"; i.multiple = true; i.hidden = true; document.body.appendChild(i);
+    i.addEventListener("change", async () => { const c = fiCible, fs = [...i.files]; i.value = ""; if (!fs.length || !c) return; await fiEnvoyer(fs, c.extra || {}); if (c.apres) c.apres(); });
+  }
+  i.click();
+}
+document.addEventListener("click", (e) => {
+  const b = e.target.closest("[data-fichoisir]"); if (!b || !S.ecrire || !db) return;
+  const v = b.dataset.fichoisir;
+  if (v.startsWith("pers:")) { const id = v.slice(5); fiChoisir({ extra: { personne: id, theme: "Entretiens" }, apres: () => peMaj(id, { a_transcrire: true, transcrit: false }) }); }
+  else fiChoisir({ extra: {} });
+});
 document.addEventListener("change", (e) => { if (e.target.id === "fiFichiers" && e.target.files.length) { fiEnvoyer(e.target.files); e.target.value = ""; } });
 document.addEventListener("dragover", (e) => { const z = e.target.closest && e.target.closest("#depose"); if (z) { e.preventDefault(); z.classList.add("survol"); } });
 document.addEventListener("dragleave", (e) => { const z = e.target.closest && e.target.closest("#depose"); if (z) z.classList.remove("survol"); });

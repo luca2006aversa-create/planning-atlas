@@ -51,10 +51,10 @@ function peCoord(r) {
   const z = peNum(r.zalo), t = peNum(r.telephone), rows = l("Zalo", r.zalo, z ? "https://zalo.me/" + z : "", r.zalo) + l("Téléphone", r.telephone, t ? "tel:" + t : "", r.telephone) + l("Email", r.email, r.email ? "mailto:" + r.email : "", r.email) + l("Adresse", r.adresse, "", "") + l("Autre", r.contact, "", "");
   return `<div class="cr-bloc"><h2>Coordonnées</h2>${rows ? `<dl class="pdl">${rows}</dl>` : `<p class="cr-vide">Aucune coordonnée pour l'instant.${S.ecrire ? " Utilise « Modifier les infos »." : ""}</p>`}</div>`;
 }
-const peMaj = (id, d) => db.collection("reponses").doc(id).update({ ...d, par: S.moi, maj: Date.now() }).catch((e) => refus(e));
+const peMaj = (id, d) => { const r = S.reponses.find((x) => x.id === id) || {}; return db.collection("reponses").doc(id).update({ ...d, auteur: r.auteur || r.par || S.moi, par: S.moi, maj: Date.now() }).catch((e) => refus(e)); };
 
 function peCarte(r) {
-  const piece = pePieces(r.id).length, badge = r.a_transcrire && !r.transcrit ? `<span class="pbadge">À transcrire</span>` : r.resume ? `<span class="pbadge ok">Résumé</span>` : "";
+  const piece = pePieces(r.id).length, badge = r.valide ? `<span class="pbadge ok">Validé</span>` : r.a_transcrire && !r.transcrit ? `<span class="pbadge">À transcrire</span>` : "";
   return `<button class="pcarte" data-pers="${esc(r.id)}"><span class="pphoto">${r.photo ? `<img src="${esc(photoUrl(r.photo))}" alt="" loading="lazy">` : `<b class="pini" style="background:${couleurDe(r.id)}">${esc(peIni(r))}</b>`}${badge}</span>
     <span class="pinfo"><b>${esc(peNom(r))}</b>${peLigne(r) ? `<span>${esc(peLigne(r))}</span>` : ""}<span>${esc(peJourTxt(r))}${peNbRep(r) ? ` · ${peNbRep(r)} réponse${peNbRep(r) > 1 ? "s" : ""}` : ""}${piece ? ` · ${piece} doc.` : ""}</span></span></button>`;
 }
@@ -75,25 +75,59 @@ function peLibres(r) {
   const qr = r.qr || [];
   return `${qr.map((x, i) => `<div class="pqi"><div style="display:grid;gap:6px"><textarea id="qrq_${i}" data-pqi="${i}" data-k="q" rows="1" placeholder="Question">${esc(x.q || "")}</textarea><textarea id="qrr_${i}" data-pqi="${i}" data-k="r" rows="2" placeholder="Réponse">${esc(x.r || "")}</textarea></div><button class="btn ico" data-qrsuppr="${i}" aria-label="Supprimer">✕</button></div>`).join("") || `<p class="cr-vide">Aucune question-réponse libre. Dépose les notes à transcrire ci-dessous, ou ajoute-les à la main.</p>`}${S.ecrire ? `<div><button class="btn" data-qrajout="1">${ic("i-plus", 14)}Ajouter une question et sa réponse</button></div>` : ""}`;
 }
+function peReponseTxt(a) { return a.v === "oui" ? "Oui" : a.v === "non" ? "Non" : a.v === "autre" && !a.autre ? "Autre" : a.v || ""; }
+function peLectureQR(r) {
+  const q = [...S.questions].sort((a, b) => (a.ordre || 0) - (b.ordre || 0)).map((x) => { const a = (r.rep || {})[x.id]; return a && (a.v || a.autre) ? { q: qt(x), r: peReponseTxt(a) + (a.autre ? (a.v === "autre" || !a.v ? "" : " : ") + a.autre : "") } : null; }).filter(Boolean);
+  const l = (r.qr || []).filter((x) => x.q || x.r).map((x) => ({ q: x.q, r: x.r }));
+  return [...q, ...l].map((x) => `<div class="pqr"><span class="pq">${esc(x.q || "")}</span><p style="margin:0;white-space:pre-wrap;overflow-wrap:anywhere">${esc(x.r || "")}</p></div>`).join("");
+}
 function pePage(r) {
-  const piece = pePieces(r.id), mic = (c, id) => typeof avecMicro === "function" ? avecMicro(c, id, "Dicter") : c;
-  const montreQ = S.persQ === r.id || Object.keys(r.rep || {}).length > 0;
+  const piece = pePieces(r.id).sort((a, b) => (a.cree || 0) - (b.cree || 0)), mic = (c, id) => typeof avecMicro === "function" ? avecMicro(c, id, "Dicter") : c;
+  const lecture = !!r.valide, montreQ = S.persQ === r.id || Object.keys(r.rep || {}).length > 0;
   const info = (k, v) => v ? `<dt>${k}</dt><dd>${v}</dd>` : "";
-  return `<div class="tete"><h1>${esc(peNom(r))}<small>${esc(peLigne(r))}</small></h1>
-    <div class="outils"><button class="btn" data-persretour="1">← Personnes</button>${S.ecrire ? `<button class="btn" data-persedit="${esc(r.id)}">Modifier les infos</button>` : ""}<button class="btn" data-perscopier="${esc(r.id)}">Copier en texte</button>${S.ecrire ? `<button class="btn rouge" data-perssuppr="${esc(r.id)}">Supprimer</button>` : ""}</div></div>
-  <div class="ppage"><aside class="cr-grille" style="grid-template-columns:1fr"><div class="pportrait">${r.photo ? `<img src="${esc(photoUrl(r.photo))}" alt="">` : `<b class="pini" style="background:${couleurDe(r.id)}">${esc(peIni(r))}</b>`}</div>
-    <div class="cr-bloc"><h2>Infos</h2><dl class="pdl">${info("Nom", esc(r.nom || ""))}${info("Âge", r.age ? esc(r.age) + " ans" : "")}${info("Profil", esc(r.profil || ""))}${info("Lieu", esc(r.lieu || ""))}${info("Entretien", esc(r.quand ? quand(r.quand) : ""))}${info("Langue", esc(r.langue || ""))}${info("Recueilli par", r.par ? auteur(r) : "")}</dl></div>${peCoord(r)}</aside>
+  const entete = `<div class="tete"><h1>${esc(peNom(r))}<small>${esc(peLigne(r))}</small></h1>
+    <div class="outils"><button class="btn" data-persretour="1">← Personnes</button>${lecture ? `<span class="pbadge ok" style="position:static;align-self:center">Validé</span>` : `<span class="pbadge" style="position:static;align-self:center;background:#6d7b75">Brouillon</span>${S.ecrire ? `<button class="btn" data-persedit="${esc(r.id)}">Modifier les infos</button>` : ""}`}<button class="btn" data-persrecap="${esc(r.id)}">Récap PDF</button><button class="btn" data-perscopier="${esc(r.id)}">Copier en texte</button>${S.ecrire && !lecture ? `<button class="btn rouge" data-perssuppr="${esc(r.id)}">Supprimer</button>` : ""}</div></div>`;
+  const aside = `<aside class="cr-grille" style="grid-template-columns:1fr"><div class="pportrait">${r.photo ? `<img src="${esc(photoUrl(r.photo))}" alt="">` : `<b class="pini" style="background:${couleurDe(r.id)}">${esc(peIni(r))}</b>`}</div>
+    <div class="cr-bloc"><h2>Infos</h2><dl class="pdl">${info("Nom", esc(r.nom || ""))}${info("Âge", r.age ? esc(r.age) + " ans" : "")}${info("Profil", esc(r.profil || ""))}${info("Lieu", esc(r.lieu || ""))}${info("Entretien", esc(r.quand ? quand(r.quand) : ""))}${info("Langue", esc(r.langue || ""))}${info("Recueilli par", r.auteur || r.par ? auteur({ par: r.auteur || r.par }) : "")}</dl></div>${peCoord(r)}</aside>`;
+  if (lecture) {
+    const qr = peLectureQR(r);
+    return entete + `<div class="ppage">${aside}<div class="cr-grille" style="grid-template-columns:1fr">
+      ${r.resume ? `<div class="cr-bloc"><h2>Résumé</h2><p style="margin:0;white-space:pre-wrap;overflow-wrap:anywhere">${esc(r.resume)}</p></div>` : ""}
+      ${qr ? `<div class="cr-bloc"><h2>Questions et réponses</h2>${qr}</div>` : ""}
+      ${r.texte_libre ? `<div class="cr-bloc"><h2>Notes</h2><p style="margin:0;white-space:pre-wrap;overflow-wrap:anywhere">${esc(r.texte_libre)}</p></div>` : ""}
+      ${piece.length ? `<div class="cr-bloc"><h2>Captures et documents <small>${piece.length}</small></h2><div class="fichiers">${piece.map(fiCarte).join("")}</div></div>` : ""}
+      <div class="cr-bloc" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">${S.ecrire ? `<button class="btn" data-persmodifier="${esc(r.id)}">Modifier</button>` : ""}<button class="btn" data-persrecap="${esc(r.id)}">Récap PDF</button><span class="qui">Fiche validée ${r.par && r.par !== (r.auteur || r.par) ? "· dernière modification par " + auteur(r) + " " : ""}· ${esc(quand(r.maj))}</span></div>
+    </div></div>`;
+  }
+  return entete + `<div class="ppage">${aside}
   <div class="cr-grille" style="grid-template-columns:1fr">
     <div class="cr-bloc"><h2>Résumé de la personne</h2>${S.ecrire && db ? mic(`<textarea id="pf_resume" data-pf="resume" placeholder="Qui est cette personne, ce qu'elle a dit d'essentiel, ce qu'on retient…">${esc(r.resume || "")}</textarea>`, "pf_resume") : `<p>${esc(r.resume || "")}</p>`}</div>
     ${montreQ ? `<div class="cr-bloc" id="persQR"><h2>Questionnaire <small><span class="seg" role="group" aria-label="Langue" style="display:inline-flex">${[["fr", "FR"], ["vi", "VI"]].map(([k, l]) => `<button data-qlang="${k}" aria-pressed="${S.langQ === k}">${l}</button>`).join("")}</span></small></h2>${peQuestionnaire(r)}</div>` : S.ecrire && db && S.questions.length ? `<div class="cr-bloc"><h2>Questionnaire</h2><div><button class="btn" data-persq="1">Remplir le questionnaire pour cette personne</button></div></div>` : ""}
     <div class="cr-bloc" id="persLibres"><h2>Autres questions et réponses <small>${(r.qr || []).length}</small></h2>${peLibres(r)}</div>
     <div class="cr-bloc"><h2>Notes brutes</h2>${S.ecrire && db ? mic(`<textarea id="pf_texte_libre" data-pf="texte_libre" rows="6" placeholder="Colle ou dicte ici le texte de l'entretien…">${esc(r.texte_libre || "")}</textarea>`, "pf_texte_libre") : `<p style="white-space:pre-wrap">${esc(r.texte_libre || "")}</p>`}</div>
-    <div class="cr-bloc"><h2>Photos et documents <small>${piece.length}</small></h2>
-      <p class="qui" style="margin:0">Dépose ici les photos des notes écrites à la main, les PDF ou les documents de cette personne. Une fois déposés, demande à Claude de les transcrire : il en tire la liste des questions et réponses et un résumé.</p>
-      ${S.ecrire && db ? `<div style="display:flex;flex-wrap:wrap;gap:8px"><label class="btn jaune" style="cursor:pointer">${ic("i-plus", 14)}Ajouter des fichiers<input type="file" id="persFichiers" data-persfich="${esc(r.id)}" multiple hidden></label><button class="btn" data-camera="pers:${esc(r.id)}">Photographier une page</button>
+    <div class="cr-bloc"><h2>Photos, captures et documents <small>${piece.length}</small></h2>
+      <p class="qui" style="margin:0">Dépose ici les photos des notes écrites à la main, les captures d'écran (conversations Zalo…), les PDF ou les documents de cette personne. Demande ensuite à Claude de les transcrire : il en tire la liste des questions et réponses et un résumé.</p>
+      ${S.ecrire && db ? `<div style="display:flex;flex-wrap:wrap;gap:8px"><button class="btn jaune" data-fichoisir="pers:${esc(r.id)}">${ic("i-plus", 14)}Ajouter des fichiers</button><button class="btn" data-camera="pers:${esc(r.id)}">Photographier une page</button>
         ${r.a_transcrire && !r.transcrit ? `<button class="btn" data-perstranscrit="${esc(r.id)}">Marquer comme transcrit</button>` : piece.length && !r.a_transcrire ? `<button class="btn" data-persatranscrire="${esc(r.id)}">Marquer « à transcrire »</button>` : ""}</div>` : ""}
-      ${piece.length ? `<div class="fichiers">${piece.sort((a, b) => (a.cree || 0) - (b.cree || 0)).map(fiCarte).join("")}</div>` : ""}</div>
+      ${piece.length ? `<div class="fichiers">${piece.map(fiCarte).join("")}</div>` : ""}</div>
+    ${S.ecrire && db ? `<div class="cr-bloc"><h2>Terminer</h2><p class="qui" style="margin:0">Quand tout est relu, valide la fiche : elle s'affiche alors comme un récap propre, sans cases à remplir. Tu pourras la rouvrir avec « Modifier », tout en bas.</p><div><button class="btn jaune" data-persvalider="${esc(r.id)}">Valider la fiche</button></div></div>` : ""}
   </div></div>`;
+}
+/* récap d'un entretien : mise en page A4 avec les captures et les photos enregistrées */
+async function peRecap(r) {
+  toast("Préparation du récap…");
+  const piece = pePieces(r.id).sort((a, b) => (a.cree || 0) - (b.cree || 0)), imgs = [];
+  for (const f of piece.filter(fiImage).slice(0, 24)) { try { imgs.push({ u: await fiUrl(f), t: f.nom }); } catch (e) {} }
+  const autres = piece.filter((f) => !fiImage(f)).map((f) => exHtml(f.nom));
+  const q = [...S.questions].sort((a, b) => (a.ordre || 0) - (b.ordre || 0)).map((x) => { const a = (r.rep || {})[x.id]; return a && (a.v || a.autre) ? { q: x.texte, r: peReponseTxt(a) + (a.autre ? (a.v === "autre" || !a.v ? "" : " : ") + a.autre : "") } : null; }).filter(Boolean);
+  const l = (r.qr || []).filter((x) => x.q || x.r), tout = [...q, ...l.map((x) => ({ q: x.q, r: x.r }))];
+  const corps = `<h1>${exHtml(peNom(r))}</h1><p class="sous">${exHtml([peLigne(r), r.quand ? new Date(r.quand).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" }) : "", r.langue ? "en " + r.langue.toLowerCase() : ""].filter(Boolean).join(" · "))} · ${exHtml(exSite())}</p>
+    ${r.resume ? `<h2>Résumé</h2><p class="t">${exHtml(r.resume)}</p>` : ""}
+    ${tout.length ? `<h2>Questions et réponses</h2>${tout.map((x) => `<div class="qa"><b>${exHtml(x.q || "")}</b><br>${exHtml(x.r || "")}</div>`).join("")}` : ""}
+    ${r.texte_libre ? `<h2>Notes</h2><p class="t">${exHtml(r.texte_libre)}</p>` : ""}
+    ${imgs.length ? `<h2>Captures et photos (${imgs.length})</h2>${imgs.map((p) => `<figure><img src="${exHtml(p.u)}"><figcaption>${exHtml(p.t)}</figcaption></figure>`).join("")}` : ""}
+    ${autres.length ? `<h2>Autres documents</h2><ul>${autres.map((x) => `<li>${x}</li>`).join("")}</ul>` : ""}`;
+  exImprimer("Récap " + peNom(r), corps, `h1{font-size:24px;margin:0}.sous{margin:2px 0 10px;color:#555}h2{font-size:14px;background:#17302a;color:#fff;padding:4px 9px;margin:16px 0 8px}.t{white-space:pre-wrap;margin:0}.qa{break-inside:avoid;margin:0 0 9px}figure{margin:0 0 12px;break-inside:avoid}img{max-width:100%;max-height:230mm;display:block;border:1px solid #ccc}figcaption{font-size:10px;color:#666;margin-top:2px}ul{margin:0;padding-left:18px}`);
 }
 const VUE_QUESTIONNAIRE = VUES.questionnaire;
 VUES.questionnaire = () => {
@@ -177,9 +211,12 @@ document.addEventListener("change", async (e) => {
   }
 });
 document.addEventListener("click", async (e) => {
-  const c = e.target.closest("[data-pcopie],[data-persq],[data-pers],[data-persretour],[data-persnouveau],[data-persedit],[data-perssuppr],[data-perscopier],[data-sousent],[data-qrajout],[data-qrsuppr],[data-peannuler],[data-pesauver],[data-perstranscrit],[data-persatranscrire]");
+  const c = e.target.closest("[data-persvalider],[data-persmodifier],[data-persrecap],[data-pcopie],[data-persq],[data-pers],[data-persretour],[data-persnouveau],[data-persedit],[data-perssuppr],[data-perscopier],[data-sousent],[data-qrajout],[data-qrsuppr],[data-peannuler],[data-pesauver],[data-perstranscrit],[data-persatranscrire]");
   if (!c) return; const d = c.dataset;
   if (d.sousent) { S.sousEnt = d.sousent; try { localStorage.setItem("sousent", d.sousent); } catch (x) {} render(); return; }
+  if (d.persrecap) { const rr = S.reponses.find((x) => x.id === d.persrecap); if (rr) await peRecap(rr); return; }
+  if (d.persvalider) { const rr = S.reponses.find((x) => x.id === d.persvalider); if (!rr) return; const vide = !rr.resume && !(rr.qr || []).some((x) => x.q || x.r) && !Object.keys(rr.rep || {}).length && !rr.texte_libre && !pePieces(rr.id).length; if (vide && !confirm("Cette fiche est vide. La valider quand même ?")) return; await peMaj(rr.id, { valide: true }); scrollTo(0, 0); toast("Fiche validée"); return; }
+  if (d.persmodifier) { await peMaj(d.persmodifier, { valide: false }); toast("Fiche rouverte pour modification"); return; }
   if (d.pcopie) { try { await navigator.clipboard.writeText(d.pcopie); toast("Copié"); } catch (x) { prompt("Copie :", d.pcopie); } return; }
   if (d.persq) { S.persQ = S.persId; render(); return; }
   if (d.pers) { S.persId = d.pers; S.persQ = null; render(); scrollTo(0, 0); return; }
